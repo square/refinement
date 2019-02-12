@@ -1,0 +1,341 @@
+module Refinement
+  # Analyzes changes in a reposity
+  # and determines how those changes impact the targets in Xcode projects in the workspace.
+  class Analyzer
+    attr_reader :changeset, :workspace_path, :augmenting_paths_yaml_files
+    private :changeset, :workspace_path, :augmenting_paths_yaml_files
+
+    # Initializes an analyzer with a changeset, projects, and augmenting paths.
+    # @param changeset [Changeset]
+    # @param workspace_path [Pathname] path to a root workspace or project,
+    #   must be `nil` if `projects` are specified explicitly
+    # @param projects [Array<Xcodeproj::Project>] projects to find targets in,
+    #   must not be specified if `workspace_path` is not `nil`
+    # @param augmenting_paths_yaml_files [Array<Pathname>] paths to YAML files that provide augmenting paths by target,
+    #   must be `nil` if `augmenting_paths_by_target` are specified explicity
+    # @param augmenting_paths_by_target [Hash<String, Array>] arrays of hashes keyed by target name
+    #  (or '*' for all targets)
+    #  describing paths or globs that each target should be considered to be using,
+    #  must not be specified if `augmenting_paths_yaml_files` is not `nil`
+    #
+    # @raise [ArgumentError] when conflicting arguments are given
+    #
+    def initialize(changeset:, workspace_path:, projects: nil,
+                   augmenting_paths_yaml_files:, augmenting_paths_by_target: nil)
+
+      @changeset = changeset
+
+      raise ArgumentError, 'Can only specify one of workspace_path and projects' if workspace_path && projects
+      @workspace_path = workspace_path
+      @projects = projects
+
+      if augmenting_paths_yaml_files && augmenting_paths_by_target
+        raise ArgumentError, 'Can only specify one of augmenting_paths_yaml_files and augmenting_paths_by_target'
+      end
+      @augmenting_paths_yaml_files = augmenting_paths_yaml_files
+      @augmenting_paths_by_target = augmenting_paths_by_target
+    end
+
+    # @return [Array<AnnotatedTarget>] targets from the projectsannotated with their changes, based upon
+    #   the changeset
+    def annotate_targets!
+      @annotate_targets ||= annotated_targets
+    end
+
+    # @param scheme_path [Pathname] the path to the scheme to be filtered
+    # @param change_level [Symbol] the change level at which a target must have changed in order
+    #  to remain in the scheme. defaults to `:full_transitive`
+    # @param filter_when_scheme_has_changed [Boolean] whether the scheme should be filtered
+    #   even when the changeset includes the scheme's path as changed.
+    #   Defaults to `false`
+    # @return [Xcodeproj::XCScheme] a scheme whos
+    def filtered_scheme(scheme_path:, change_level: :full_transitive, filter_when_scheme_has_changed: false)
+      scheme = Xcodeproj::XCScheme.new(scheme_path)
+
+      if filter_when_scheme_has_changed ||
+         !UsedPath.new(path: Pathname(scheme_path), inclusion_reason: 'scheme').find_in_changeset(changeset)
+
+        suite_names = annotate_targets!
+                      .select { |at| at.changed?(level: change_level) }
+                      .map { |at| at.xcode_target.name }
+
+        doc = scheme.doc
+
+        xpaths = %w[
+          //*/TestableReference/BuildableReference
+          //*/BuildActionEntry/BuildableReference
+        ]
+        xpaths.each do |xpath|
+          doc.get_elements(xpath).to_a.each do |buildable_reference|
+            next if suite_names.include? buildable_reference.attributes['BlueprintName']
+            buildable_reference.parent.remove
+          end
+        end
+      end
+
+      scheme
+    end
+
+    # @return [String] a string suitable for user display that explains target changes
+    # @param include_unchanged_targets [Boolean] whether targets that have not changed should also be displayed
+    # @param change_level [Symbol] the change level used for computing whether a target has changed
+    def format_changes(include_unchanged_targets: false, change_level: :full_transitive)
+      annotate_targets!.group_by { |target| target.xcode_target.project.path.to_s }.sort_by(&:first)
+                       .map do |project, annotated_targets|
+        changes = annotated_targets.sort_by { |annotated_target| annotated_target.xcode_target.name }
+                                   .map do |annotated_target|
+          change_reason = annotated_target.changed?(level: change_level)
+          next if !include_unchanged_targets && !change_reason
+          change_reason ||= 'did not change'
+          "\t#{annotated_target.xcode_target}: #{change_reason}"
+        end.compact
+        "#{project}:\n#{changes.join("\n")}" unless changes.empty?
+      end.compact.join("\n")
+    end
+
+    private
+
+    def projects
+      @projects ||= find_projects(workspace_path)
+    end
+
+    def augmenting_paths_by_target
+      @augmenting_paths_by_target ||= begin
+        require 'yaml'
+        augmenting_paths_yaml_files.reduce({}) do |augmenting_paths_by_target, yaml_file|
+          yaml_file = Pathname(yaml_file).expand_path(changeset.repository)
+          yaml = YAML.safe_load(yaml_file.read)
+          augmenting_paths_by_target.merge(yaml) do |_target_name, prior_paths, new_paths|
+            prior_paths + new_paths
+          end
+        end
+      end
+    end
+
+    def map_find(enum)
+      enum.each do |elem|
+        transformed = yield elem
+        return transformed if transformed
+      end
+
+      nil
+    end
+
+    # @return [Array<AnnotatedTarget>] targets in the given list of Xcode projects,
+    #   annotated according to the given changeset
+    def annotated_targets
+      project_changes = Hash[projects.map do |project|
+        [project, project_referenced_in_changeset?(project: project)]
+      end]
+
+      require 'tsort'
+      targets = projects.flat_map(&:targets)
+      targets_by_uuid = Hash[targets.map { |t| [t.uuid, t] }]
+      targets_by_name = Hash[targets.map { |t| [t.name, t] }]
+      targets_by_product_name = Hash[targets.map do |t|
+        next unless t.respond_to?(:product_reference)
+        [File.basename(t.product_reference.path), t]
+      end.compact]
+
+      find_dep = ->(td) { targets_by_uuid[td.native_target_uuid] || targets_by_name[td.name] }
+      target_deps = lambda do |target|
+        a = []
+        target.dependencies.each do |td|
+          a << find_dep[td]
+        end
+
+        # TODO: also resolve OTHER_LDFLAGS?
+        # yay auto-linking
+        if (phase = target.frameworks_build_phases)
+          phase.files_references.each do |fr|
+            if (dt = fr && fr.path && targets_by_product_name[File.basename(fr.path)])
+              a << dt
+            end
+          end
+        end
+
+        a
+      end
+
+      targets = TSort.tsort(
+        ->(&b) { targets.each(&b) },
+        ->(target, &b) { target_deps[target].each(&b) }
+      )
+
+      targets.each_with_object({}) do |target, h|
+        change_reason = project_changes[target.project] || target_referenced_in_changeset?(target: target)
+
+        h[target] = AnnotatedTarget.new(
+          target: target,
+          dependencies: target_deps[target].map { |td| h.fetch(td) },
+          change_reason: change_reason
+        )
+      end.values
+    end
+
+    # @return [Array<Xcodeproj::Project>] the projects found by walking the
+    #  project/workspace at the given path
+    # @param  path [Pathname] path to a `.xcodeproj` or `.xcworkspace` on disk
+    def find_projects(path)
+      seen = {}
+      find_projects_cached = lambda do |project_path|
+        return if seen.key?(project_path)
+
+        case File.extname(project_path)
+        when '.xcodeproj'
+          project = Xcodeproj::Project.open(project_path)
+          seen[project_path] = project
+          project.files.each do |file_reference|
+            next unless File.extname(file_reference.path) == '.xcodeproj'
+
+            find_projects_cached[file_reference.real_path]
+          end
+        when '.xcworkspace'
+          workspace = Xcodeproj::Workspace.new_from_xcworkspace(project_path)
+          workspace.file_references.each do |file_reference|
+            next unless File.extname(file_reference.path) == '.xcodeproj'
+
+            find_projects_cached[file_reference.absolute_path(File.dirname(project_path))]
+          end
+        else
+          raise ArgumentError, "Unknown path #{project_path.inspect}"
+        end
+      end
+      find_projects_cached[path]
+
+      seen.values
+    end
+
+    # @yieldparam used_path [UsedPath] an absolute path that belongs to the given target
+    # @return [Void]
+    # @param target [Xcodeproj::Project::AbstractTarget]
+    def target_each_file_path(target:)
+      return enum_for(__method__, target: target) unless block_given?
+
+      expand_build_settings = lambda do |s|
+        return [s] unless s =~ /\$(?:\{([_a-zA-Z0-0]+?)\}|\(([_a-zA-Z0-0]+?)\))/
+        match, key = Regexp.last_match.values_at(0, 1, 2).compact
+        substitutions = target.resolved_build_setting(key, true).values.compact.uniq
+        substitutions.flat_map do |sub|
+          expand_build_settings[s.gsub(match, sub)]
+        end
+      end
+
+      target.build_configuration_list.build_configurations.each do |build_configuration|
+        ref = build_configuration.base_configuration_reference
+        next unless ref
+        yield UsedPath.new(path: ref.real_path,
+                           inclusion_reason: "base configuration reference for #{build_configuration}")
+      end
+
+      target.build_phases.each do |build_phase|
+        build_phase.files_references.each do |fr|
+          next unless fr
+          yield UsedPath.new(path: fr.real_path,
+                             inclusion_reason: "#{build_phase.display_name.downcase.chomp('s')} file")
+        end
+      end
+
+      target.shell_script_build_phases.each do |shell_script_build_phase|
+        %w[input_file_list_paths output_file_list_paths input_paths output_paths].each do |method|
+          next unless (paths = shell_script_build_phase.public_send(method))
+          file_type = method.tr('_', ' ').chomp('s')
+          paths.each do |config_path|
+            next unless config_path
+            expand_build_settings[config_path].each do |path|
+              path = Pathname(path).expand_path(target.project.project_dir)
+              yield UsedPath.new(path: path,
+                                 inclusion_reason: "#{shell_script_build_phase.name} build phase #{file_type}")
+            end
+          end
+        end
+      end
+
+      %w[INFOPLIST_FILE HEADER_SEARCH_PATHS FRAMEWORK_SEARCH_PATHS USER_HEADER_SEARCH_PATHS].each do |build_setting|
+        target.resolved_build_setting(build_setting, true).each_value do |paths|
+          Array(paths).each do |path|
+            next unless path
+            path = Pathname(path).expand_path(target.project.project_dir)
+            yield UsedPath.new(path: path, inclusion_reason: "#{build_setting} value")
+          end
+        end
+      end
+    end
+
+    # @return [Boolean] whether the given target includes a path in the given changeset
+    # @param target [Xcodeproj::Project::AbstractTarget]
+    def target_referenced_in_changeset?(target:)
+      augmenting_paths = used_paths_from_augmenting_paths_by_target[target.name]
+      find_in_changeset = ->(path) { path.find_in_changeset(changeset) }
+      map_find(augmenting_paths, &find_in_changeset) ||
+        map_find(target_each_file_path(target: target), &find_in_changeset)
+    end
+
+    # @yieldparam used_path [UsedPath] an absolute path that belongs to the given project
+    # @return [Void]
+    # @param project [Xcodeproj::Project]
+    def project_each_file_path(project:)
+      return enum_for(__method__, project: project) unless block_given?
+
+      yield UsedPath.new(path: project.path, inclusion_reason: 'project directory')
+
+      project.root_object.build_configuration_list.build_configurations.each do |build_configuration|
+        ref = build_configuration.base_configuration_reference
+        next unless ref
+        yield UsedPath.new(path: ref.real_path,
+                           inclusion_reason: "base configuration reference for #{build_configuration}")
+      end
+    end
+
+    # @return [Boolean] whether the given project _directly_ includes a path in the given changeset
+    # @note This method does not take into account whatever file paths targets in the project may reference
+    # @param project [Xcodeproj::Project]
+    def project_referenced_in_changeset?(project:)
+      map_find(project_each_file_path(project: project)) do |path|
+        path.find_in_changeset(changeset)
+      end || workspace_referenced_in_changeset?
+    end
+
+    def workspace_referenced_in_changeset?
+      return unless workspace_path
+
+      UsedPath.new(path: workspace_path, inclusion_reason: 'workspace directory')
+              .find_in_changeset(changeset)
+    end
+
+    def used_paths_from_augmenting_paths_by_target
+      @used_paths_from_augmenting_paths_by_target ||= begin
+        repo = changeset.repository
+        used_paths_from_augmenting_paths_by_target =
+          augmenting_paths_by_target.each_with_object({}) do |(name, augmenting_paths), h|
+            h[name] = augmenting_paths.map do |augmenting_path|
+              case augmenting_path.keys.sort
+              when %w[inclusion_reason path], %w[inclusion_reason path yaml_keypath]
+                kwargs = {
+                  path: Pathname(augmenting_path['path']).expand_path(repo),
+                  inclusion_reason: augmenting_path['inclusion_reason']
+                }
+                if augmenting_path.key?('yaml_keypath')
+                  kwargs[:yaml_keypath] = augmenting_path['yaml_keypath']
+                  UsedPath::YAML.new(**kwargs)
+                else
+                  UsedPath.new(**kwargs)
+                end
+              when %w[glob inclusion_reason]
+                UsedGlob.new(glob: File.expand_path(augmenting_path['glob'], repo),
+                             inclusion_reason: augmenting_path['inclusion_reason'])
+              else
+                raise ArgumentError,
+                      "unhandled set of keys in augmenting paths dictionary entry: #{augmenting_path.keys.inspect}"
+              end
+            end
+          end
+        wildcard_paths = used_paths_from_augmenting_paths_by_target.fetch('*', [])
+
+        Hash.new do |h, k|
+          h[k] = wildcard_paths + used_paths_from_augmenting_paths_by_target.fetch(k, [])
+        end
+      end
+    end
+  end
+end
