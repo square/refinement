@@ -10,7 +10,7 @@ module Refinement
 
     # @return [Pathname] the path to the repository
     attr_reader :repository
-    # @return [Array<FileModification>] the modfications in the changeset
+    # @return [Array<FileModification>] the modifications in the changeset
     attr_reader :modifications
     # @return [Hash<Pathname,FileModification>] modifications keyed by relative path
     attr_reader :modified_paths
@@ -38,7 +38,7 @@ module Refinement
     # @visibility private
     # @return [Array<FileModification>] file modifications that include modifications for each
     #                                   directory that has had a child modified
-    # @param  modifications [Array<FileModification>] The modfications to add directory modifications to
+    # @param  modifications [Array<FileModification>] The modifications to add directory modifications to
     def self.add_directories(modifications)
       dirs = Set.new
       add = lambda { |path|
