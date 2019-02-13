@@ -139,9 +139,9 @@ module Refinement
 
       find_dep = ->(td) { targets_by_uuid[td.native_target_uuid] || targets_by_name[td.name] }
       target_deps = lambda do |target|
-        a = []
+        target_dependencies = []
         target.dependencies.each do |td|
-          a << find_dep[td]
+          target_dependencies << find_dep[td]
         end
 
         # TODO: also resolve OTHER_LDFLAGS?
@@ -149,12 +149,12 @@ module Refinement
         if (phase = target.frameworks_build_phases)
           phase.files_references.each do |fr|
             if (dt = fr && fr.path && targets_by_product_name[File.basename(fr.path)])
-              a << dt
+              target_dependencies << dt
             end
           end
         end
 
-        a
+        target_dependencies
       end
 
       targets = TSort.tsort(
