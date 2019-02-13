@@ -1,5 +1,5 @@
 module Refinement
-  # Analyzes changes in a reposity
+  # Analyzes changes in a repository
   # and determines how those changes impact the targets in Xcode projects in the workspace.
   class Analyzer
     attr_reader :changeset, :workspace_path, :augmenting_paths_yaml_files
@@ -12,7 +12,7 @@ module Refinement
     # @param projects [Array<Xcodeproj::Project>] projects to find targets in,
     #   must not be specified if `workspace_path` is not `nil`
     # @param augmenting_paths_yaml_files [Array<Pathname>] paths to YAML files that provide augmenting paths by target,
-    #   must be `nil` if `augmenting_paths_by_target` are specified explicity
+    #   must be `nil` if `augmenting_paths_by_target` are specified explicitly
     # @param augmenting_paths_by_target [Hash<String, Array>] arrays of hashes keyed by target name
     #  (or '*' for all targets)
     #  describing paths or globs that each target should be considered to be using,
@@ -36,19 +36,19 @@ module Refinement
       @augmenting_paths_by_target = augmenting_paths_by_target
     end
 
-    # @return [Array<AnnotatedTarget>] targets from the projectsannotated with their changes, based upon
+    # @return [Array<AnnotatedTarget>] targets from the projects annotated with their changes, based upon
     #   the changeset
     def annotate_targets!
       @annotate_targets ||= annotated_targets
     end
 
-    # @param scheme_path [Pathname] the path to the scheme to be filtered
+    # @param scheme_path [Pathname] the absolute path to the scheme to be filtered
     # @param change_level [Symbol] the change level at which a target must have changed in order
     #  to remain in the scheme. defaults to `:full_transitive`
     # @param filter_when_scheme_has_changed [Boolean] whether the scheme should be filtered
     #   even when the changeset includes the scheme's path as changed.
     #   Defaults to `false`
-    # @return [Xcodeproj::XCScheme] a scheme whos
+    # @return [Xcodeproj::XCScheme] a scheme whose unchanged targets have been removed
     def filtered_scheme(scheme_path:, change_level: :full_transitive, filter_when_scheme_has_changed: false)
       scheme = Xcodeproj::XCScheme.new(scheme_path)
 
