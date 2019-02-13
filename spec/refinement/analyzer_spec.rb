@@ -182,6 +182,27 @@ RSpec.describe Refinement::Analyzer do
     it { is_expected.to eq 'foo' => 'README.md (READMEs are important) changed', 'bar' => 'README.md (documentation is key) changed' }
   end
 
+  context 'with augmenting_paths_by_target that affect all targets' do
+    project do
+      target 'foo'
+      target 'bar'
+    end
+
+    let(:augmenting_paths_by_target) do
+      {
+        '*' => [
+          { 'path' => 'Gemfile.lock', 'inclusion_reason' => 'ruby dependencies' }
+        ]
+      }
+    end
+
+    changeset do
+      file 'Gemfile.lock'
+    end
+
+    it { is_expected.to eq 'foo' => 'Gemfile.lock (ruby dependencies) changed', 'bar' => 'Gemfile.lock (ruby dependencies) changed' }
+  end
+
   context 'with augmenting_paths_by_target using YAML keypaths' do
     project do
       target 'foo'
