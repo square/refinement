@@ -14,15 +14,25 @@ RSpec.describe Refinement::CocoaPodsPostInstallWriter do # rubocop:disable RSpec
     Dir.mktmpdir do |tmpdir|
       Dir.chdir(tmpdir) do
         Pod::Config.instance = nil
-        Pod::Config.instance.with_changes(silent: true) do
+        Pod::Config.instance.with_changes(silent: true, home_dir: Pathname(tmpdir).join('.cocoapods')) do
           example.run
         end
       end
     end
   end
 
+  let(:tmp_git_source) do
+    FileUtils.mkdir_p('tmp_git_source')
+    IO.popen(%w[git init .], chdir: 'tmp_git_source', &:read)
+    IO.popen(%w[git commit -m InitialCommit --allow-empty -n], chdir: 'tmp_git_source', &:read)
+    "file://#{File.expand_path('tmp_git_source')}"
+  end
+
   let(:podfile) do
+    source_url = tmp_git_source
     Pod::Podfile.new do
+      source source_url
+
       target 'A' do
         pod 'PodA', path: 'PodA/PodA.podspec.json', appspecs: %w[DemoApp]
         pod 'PodC', path: 'PodC/PodC.podspec.json'
