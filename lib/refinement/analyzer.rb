@@ -48,16 +48,17 @@ module Refinement
     # @param filter_when_scheme_has_changed [Boolean] whether the scheme should be filtered
     #   even when the changeset includes the scheme's path as changed.
     #   Defaults to `false`
+    # @param log_changes [Boolean] whether modifications to the scheme are logged.
+    #   Defaults to `false`
     # @return [Xcodeproj::XCScheme] a scheme whose unchanged targets have been removed
-    def filtered_scheme(scheme_path:, change_level: :full_transitive, filter_when_scheme_has_changed: false)
+    def filtered_scheme(scheme_path:, change_level: :full_transitive, filter_when_scheme_has_changed: false, log_changes: false)
       scheme = Xcodeproj::XCScheme.new(scheme_path)
 
       if filter_when_scheme_has_changed ||
          !UsedPath.new(path: Pathname(scheme_path), inclusion_reason: 'scheme').find_in_changeset(changeset)
 
-        suite_names = annotate_targets!
-                      .select { |at| at.change_reason(level: change_level) }
-                      .map { |at| at.xcode_target.name }
+        changes_by_suite_name = Hash[annotate_targets!
+                                .map { |at| [at.xcode_target.name, at.change_reason(level: change_level)] }]
 
         doc = scheme.doc
 
@@ -67,7 +68,12 @@ module Refinement
         ]
         xpaths.each do |xpath|
           doc.get_elements(xpath).to_a.each do |buildable_reference|
-            next if suite_names.include? buildable_reference.attributes['BlueprintName']
+            suite_name = buildable_reference.attributes['BlueprintName']
+            if (change_reason = changes_by_suite_name[suite_name])
+              puts "#{suite_name} changed because #{change_reason}" if log_changes
+              next
+            end
+            puts "#{suite_name} did not change, removing from scheme" if log_changes
             buildable_reference.parent.remove
           end
         end
