@@ -68,6 +68,12 @@ RSpec.describe Refinement::Analyzer do
       it { is_expected.to eq 'bar' => 'dependency foo changed because a.swift (source file) changed', 'foo' => 'a.swift (source file) changed', 'baz' => nil }
     end
 
+    context 'with at_most_n_away mode and n = 2' do
+      let(:change_level) { [:at_most_n_away, 2] }
+
+      it { is_expected.to eq 'bar' => 'dependency foo changed because a.swift (source file) changed', 'foo' => 'a.swift (source file) changed', 'baz' => 'dependency bar changed because dependency foo changed because a.swift (source file) changed' }
+    end
+
     context 'with at_most_n_away mode and n = 99' do
       let(:change_level) { [:at_most_n_away, 99] }
 
@@ -174,5 +180,35 @@ RSpec.describe Refinement::Analyzer do
     end
 
     it { is_expected.to eq 'foo' => 'README.md (READMEs are important) changed', 'bar' => 'README.md (documentation is key) changed' }
+  end
+
+  context 'with augmenting_paths_by_target using YAML keypaths' do
+    project do
+      target 'foo'
+      target 'bar'
+      target 'baz'
+    end
+
+    let(:augmenting_paths_by_target) do
+      {
+        'foo' => [
+          { 'path' => 'metadata.yaml', 'yaml_keypath' => %w[foo], 'inclusion_reason' => 'target metadata' }
+        ],
+        'bar' => [
+          { 'path' => 'metadata.yaml', 'yaml_keypath' => %w[bar], 'inclusion_reason' => 'target metadata' }
+        ],
+        'baz' => [
+          { 'path' => 'metadata.yaml', 'yaml_keypath' => %w[], 'inclusion_reason' => 'target metadata' }
+        ]
+      }
+    end
+
+    changeset do
+      file 'metadata.yaml',
+           current_content: "---\nfoo: a\nbar: b\nbaz: c\n",
+           prior_content: "---\nfoo: a\nbar: BB\nbaz: c\n"
+    end
+
+    it { is_expected.to eq 'foo' => nil, 'bar' => 'metadata.yaml @ bar (target metadata) changed', 'baz' => 'metadata.yaml (target metadata) changed' }
   end
 end

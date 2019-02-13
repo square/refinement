@@ -56,7 +56,7 @@ module Refinement
     # @return [FileModification,Nil] the changeset for the given absolute path,
     #   or `nil` if the given path is un-modified
     # @param absolute_path [Pathname]
-    def include_path?(absolute_path:)
+    def find_modification_for_path(absolute_path:)
       modified_absolute_paths[absolute_path]
     end
 
@@ -103,10 +103,12 @@ module Refinement
     end
     private :dir_glob_equivalent_patterns
 
-    # @return [FileModification,Nil] the changeset for the given absolute glob,
+    # @return [FileModification,Nil] the modification for the given absolute glob,
     #   or `nil` if no files matching the glob were modified
+    # @note Will only return a single (arbitrary) matching modification, even if there are
+    #   multiple modifications that match the glob
     # @param absolute_glob [String] a glob pattern for absolute paths, suitable for an invocation of `Dir.glob`
-    def include_glob?(absolute_glob:)
+    def find_modification_for_glob(absolute_glob:)
       absolute_globs = dir_glob_equivalent_patterns(absolute_glob)
       _path, modification = modified_absolute_paths.find do |absolute_path, _modification|
         absolute_globs.any? do |glob|
@@ -116,12 +118,12 @@ module Refinement
       modification
     end
 
-    # @return [FileModification|Nil, String|Nil] a modification and yaml diff for the keypath at the given absolute path,
+    # @return [FileModification,Nil] a modification and yaml diff for the keypath at the given absolute path,
     #  or `nil` if the value at the given keypath is un-modified
     # @param absolute_path [Pathname]
     # @param keypath [Array]
-    def include_yaml_keypath?(absolute_path:, keypath:)
-      return unless (file_modification = include_path?(absolute_path: absolute_path))
+    def find_modification_for_yaml_keypath(absolute_path:, keypath:)
+      return unless (file_modification = find_modification_for_path(absolute_path: absolute_path))
       diff = file_modification.yaml_diff(keypath)
       return unless diff
       [file_modification, diff]

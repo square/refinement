@@ -74,7 +74,7 @@ module SpecHelper
       analyzer = Refinement::Analyzer.new(changeset: changeset, workspace_path: nil, projects: [project], augmenting_paths_yaml_files: nil, augmenting_paths_by_target: augmenting_paths_by_target)
       annotated_targets = analyzer.annotate_targets!
       Hash[annotated_targets.map do |annotated_target|
-        change_reason = annotated_target.changed?(level: level)
+        change_reason = annotated_target.change_reason(level: level)
         change_reason = change_reason.to_s if change_reason
         [annotated_target.xcode_target.name, change_reason]
       end]

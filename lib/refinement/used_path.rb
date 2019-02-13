@@ -17,7 +17,7 @@ module Refinement
     # @return [Nil, String] If the path has been modified, a string explaining the modification
     # @param changeset [Changeset] the changeset to search for a modification to this path
     def find_in_changeset(changeset)
-      add_reason changeset.include_path?(absolute_path: path)
+      add_reason changeset.find_modification_for_path(absolute_path: path)
     end
 
     # @return [String]
@@ -51,7 +51,7 @@ module Refinement
 
       # (see UsedPath#find_in_changeset)
       def find_in_changeset(changeset)
-        modification, _yaml_diff = changeset.include_yaml_keypath?(absolute_path: path, keypath: yaml_keypath)
+        modification, _yaml_diff = changeset.find_modification_for_yaml_keypath(absolute_path: path, keypath: yaml_keypath)
         add_reason modification
       end
 
@@ -66,7 +66,13 @@ module Refinement
       def add_reason(modification)
         return unless modification
 
-        "#{modification.path} @ #{yaml_keypath.join('.')} (#{inclusion_reason}) #{modification.type}"
+        keypath_string =
+          if yaml_keypath.empty?
+            ''
+          else
+            ' @ ' + yaml_keypath.map { |path| path.to_s =~ /\A[a-zA-Z0-9_]+\z/ ? path : path.inspect }.join('.')
+          end
+        "#{modification.path}#{keypath_string} (#{inclusion_reason}) #{modification.type}"
       end
     end
   end
@@ -88,7 +94,7 @@ module Refinement
 
     # (see UsedPath#find_in_changeset)
     def find_in_changeset(changeset)
-      add_reason changeset.include_glob?(absolute_glob: glob)
+      add_reason changeset.find_modification_for_glob(absolute_glob: glob)
     end
 
     # (see UsedPath#to_s)

@@ -56,7 +56,7 @@ module Refinement
          !UsedPath.new(path: Pathname(scheme_path), inclusion_reason: 'scheme').find_in_changeset(changeset)
 
         suite_names = annotate_targets!
-                      .select { |at| at.changed?(level: change_level) }
+                      .select { |at| at.change_reason(level: change_level) }
                       .map { |at| at.xcode_target.name }
 
         doc = scheme.doc
@@ -84,7 +84,7 @@ module Refinement
                        .map do |project, annotated_targets|
         changes = annotated_targets.sort_by { |annotated_target| annotated_target.xcode_target.name }
                                    .map do |annotated_target|
-          change_reason = annotated_target.changed?(level: change_level)
+          change_reason = annotated_target.change_reason(level: change_level)
           next if !include_unchanged_targets && !change_reason
           change_reason ||= 'did not change'
           "\t#{annotated_target.xcode_target}: #{change_reason}"
@@ -95,10 +95,12 @@ module Refinement
 
     private
 
+    # @return [Array<Xcodeproj::Project>]
     def projects
       @projects ||= find_projects(workspace_path)
     end
 
+    # @return [Hash<String,Array<Hash>>]
     def augmenting_paths_by_target
       @augmenting_paths_by_target ||= begin
         require 'yaml'
@@ -112,20 +114,12 @@ module Refinement
       end
     end
 
-    def map_find(enum)
-      enum.each do |elem|
-        transformed = yield elem
-        return transformed if transformed
-      end
-
-      nil
-    end
-
     # @return [Array<AnnotatedTarget>] targets in the given list of Xcode projects,
     #   annotated according to the given changeset
     def annotated_targets
+      workspace_modification = find_workspace_modification_in_changeset
       project_changes = Hash[projects.map do |project|
-        [project, project_referenced_in_changeset?(project: project)]
+        [project, find_project_modification_in_changeset(project: project) || workspace_modification]
       end]
 
       require 'tsort'
@@ -163,7 +157,7 @@ module Refinement
       )
 
       targets.each_with_object({}) do |target, h|
-        change_reason = project_changes[target.project] || target_referenced_in_changeset?(target: target)
+        change_reason = project_changes[target.project] || find_target_modification_in_changeset(target: target)
 
         h[target] = AnnotatedTarget.new(
           target: target,
@@ -262,13 +256,14 @@ module Refinement
       end
     end
 
-    # @return [Boolean] whether the given target includes a path in the given changeset
+    # @return [FileModification,Nil] a modification to a file that is used by the given target, or `nil`
+    #   if none if found
     # @param target [Xcodeproj::Project::AbstractTarget]
-    def target_referenced_in_changeset?(target:)
+    def find_target_modification_in_changeset(target:)
       augmenting_paths = used_paths_from_augmenting_paths_by_target[target.name]
       find_in_changeset = ->(path) { path.find_in_changeset(changeset) }
-      map_find(augmenting_paths, &find_in_changeset) ||
-        map_find(target_each_file_path(target: target), &find_in_changeset)
+      Refinement.map_find(augmenting_paths, &find_in_changeset) ||
+        Refinement.map_find(target_each_file_path(target: target), &find_in_changeset)
     end
 
     # @yieldparam used_path [UsedPath] an absolute path that belongs to the given project
@@ -287,22 +282,28 @@ module Refinement
       end
     end
 
-    # @return [Boolean] whether the given project _directly_ includes a path in the given changeset
+    # # @return [FileModification,Nil] a modification to a file that is directly used by the given project, or `nil`
+    #   if none if found
     # @note This method does not take into account whatever file paths targets in the project may reference
     # @param project [Xcodeproj::Project]
-    def project_referenced_in_changeset?(project:)
-      map_find(project_each_file_path(project: project)) do |path|
+    def find_project_modification_in_changeset(project:)
+      Refinement.map_find(project_each_file_path(project: project)) do |path|
         path.find_in_changeset(changeset)
-      end || workspace_referenced_in_changeset?
+      end
     end
 
-    def workspace_referenced_in_changeset?
+    # @return [FileModification,Nil] a modification to the workspace itself, or `nil`
+    #   if none if found
+    # @note This method does not take into account whatever file paths projects or
+    #   targets in the workspace path may reference
+    def find_workspace_modification_in_changeset
       return unless workspace_path
 
       UsedPath.new(path: workspace_path, inclusion_reason: 'workspace directory')
               .find_in_changeset(changeset)
     end
 
+    # @return [Hash<String,UsedPath>]
     def used_paths_from_augmenting_paths_by_target
       @used_paths_from_augmenting_paths_by_target ||= begin
         repo = changeset.repository

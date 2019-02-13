@@ -3,12 +3,14 @@ module Refinement
   class AnnotatedTarget
     # @return [Xcodeproj::Project::AbstactTarget] the target in an Xcode project
     attr_reader :xcode_target
+
     # @return [String,Nil] the reason why the target has changed, or `nil` if it has not changed
-    attr_reader :change_reason
+    attr_reader :direct_change_reason
+    private :direct_change_reason
 
     def initialize(target:, change_reason:, dependencies: [])
       @xcode_target = target
-      @change_reason = change_reason
+      @direct_change_reason = change_reason
       @dependencies = dependencies
       dependencies.each do |dependency|
         dependency.depended_upon_by << self
@@ -30,26 +32,32 @@ module Refinement
 
     # @return [Boolean] whether the target has changed, at the given change level
     # @param level [Symbol,(:at_most_n_away,Integer)] change level, e.g. :itself, :at_most_n_away, :full_transitive
-    def changed?(level:)
-      @changed ||= {}
-      return @changed[level] if @changed.key?(level)
+    def change_reason(level:)
+      @change_reason ||= {}
+      # need to use this form for memoization, as opposed to ||=,
+      # since this will (often) be nil and it makes a significant performance difference
+      return @change_reason[level] if @change_reason.key?(level)
 
-      @changed[level] =
+      @change_reason[level] =
         case level
         when :itself
-          change_reason
+          direct_change_reason
         when :full_transitive
-          change_reason || (dependencies.each do |dependency|
-            next unless (cr = dependency.changed?(level: level))
-            return "dependency #{dependency} changed because #{cr}"
-          end && nil)
+          direct_change_reason || Refinement.map_find(dependencies) do |dependency|
+            next unless (dependency_change_reason = dependency.change_reason(level: level))
+            "dependency #{dependency} changed because #{dependency_change_reason}"
+          end
         when proc { |symbol, int| (symbol == :at_most_n_away) && int.is_a?(Integer) }
-          n = level.last
-          raise ArgumentError, "level must be positive, not #{n}" if n < 0
-          change_reason || ((n > 0) && dependencies.each do |dependency|
-            next unless (cr = dependency.changed?(level: [:at_most_n_away, level.last.pred]))
-            return "dependency #{dependency} changed because #{cr}"
-          end && nil)
+          distance_from_target = level.last
+          raise ArgumentError, "level must be positive, not #{distance_from_target}" if distance_from_target < 0
+          change_reason = direct_change_reason
+          if distance_from_target > 0
+            change_reason ||= Refinement.map_find(dependencies) do |dependency|
+              next unless (dependency_change_reason = dependency.change_reason(level: [:at_most_n_away, level.last.pred]))
+              "dependency #{dependency} changed because #{dependency_change_reason}"
+            end
+          end
+          change_reason
         else
           raise Error, "No known change level #{level.inspect}, only #{CHANGE_LEVELS.inspect} are known"
         end
