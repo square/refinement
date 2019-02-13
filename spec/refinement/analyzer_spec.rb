@@ -148,7 +148,7 @@ RSpec.describe Refinement::Analyzer do
 
     changeset do
       file 'common.m'
-      file 'common.h', type: 'D'
+      file 'common.h', type: 'D' # not used by any target, should not show up
     end
 
     it { is_expected.to eq 'foo' => 'common.m (source file) changed', 'bar' => 'common.m (source file) changed' }
@@ -210,5 +210,45 @@ RSpec.describe Refinement::Analyzer do
     end
 
     it { is_expected.to eq 'foo' => nil, 'bar' => 'metadata.yaml @ bar (target metadata) changed', 'baz' => 'metadata.yaml (target metadata) changed' }
+  end
+
+  context 'with a target that depends on another target via auto-linking' do
+    let(:change_level) { :full_transitive }
+
+    project do
+      target 'foo_framework', type: :framework do
+        source_files 'main.swift'
+        product_reference.path = 'foo.framework'
+      end
+      target 'foo_static_library', type: :library do
+        source_files 'main.swift'
+        product_reference.path = 'libFoo.a'
+      end
+      target 'foo_dynamic_library', type: :dynamic_library do
+        source_files 'main.swift'
+        product_reference.path = 'libFoo.dylib'
+      end
+      target 'bar' do
+        frameworks_build_phases.add_file_reference(project.new_file('foo.framework'))
+      end
+      target 'baz' do
+        frameworks_build_phases.add_file_reference(project.new_file('libFoo.a'))
+      end
+      target 'qux' do
+        frameworks_build_phases.add_file_reference(project.new_file('libFoo.dylib'))
+      end
+    end
+
+    changeset do
+      file 'main.swift'
+    end
+    it {
+      is_expected.to eq 'bar' => 'dependency foo_framework changed because main.swift (source file) changed',
+                        'baz' => 'dependency foo_static_library changed because main.swift (source file) changed',
+                        'foo_dynamic_library' => 'main.swift (source file) changed',
+                        'foo_framework' => 'main.swift (source file) changed',
+                        'foo_static_library' => 'main.swift (source file) changed',
+                        'qux' => 'dependency foo_dynamic_library changed because main.swift (source file) changed'
+    }
   end
 end

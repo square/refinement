@@ -75,7 +75,6 @@ module SpecHelper
       annotated_targets = analyzer.annotate_targets!
       Hash[annotated_targets.map do |annotated_target|
         change_reason = annotated_target.change_reason(level: level)
-        change_reason = change_reason.to_s if change_reason
         [annotated_target.xcode_target.name, change_reason]
       end]
     end
