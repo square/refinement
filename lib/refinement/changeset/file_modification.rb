@@ -71,7 +71,15 @@ module Refinement
         dig_yaml = lambda do |yaml|
           return yaml if DOES_NOT_EXIST == yaml
           object = YAML.safe_load(yaml, [Symbol])
-          keypath.empty? ? object : object.dig(*keypath)
+          if keypath.empty?
+            object
+          elsif object.respond_to?(:dig)
+            object.dig(*keypath)
+          else # backwards compatibility
+            keypath.reduce(object) do |acc, elem|
+              acc[elem]
+            end
+          end
         end
 
         prior = dig_yaml[prior_contents]
