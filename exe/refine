@@ -1,0 +1,6 @@
+#!/usr/bin/env ruby
+
+require 'refinement'
+require 'refinement/cli'
+
+Refinement::CLI.run(ARGV)

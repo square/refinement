@@ -9,7 +9,7 @@ Gem::Specification.new do |spec|
 
   spec.summary       = 'Generates a list of Xcode targets to build & test as a result of a git diff.'
 
-  spec.files         = Dir['*.md', 'lib/**/*', 'VERSION']
+  spec.files         = Dir['*.md', 'lib/**/*', 'VERSION', 'exe/*']
   spec.bindir        = 'exe'
   spec.executables   = spec.files.grep(%r{^exe/}) { |f| File.basename(f) }
   spec.require_paths = ['lib']
