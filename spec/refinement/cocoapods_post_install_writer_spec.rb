@@ -25,7 +25,11 @@ RSpec.describe Refinement::CocoaPodsPostInstallWriter do # rubocop:disable RSpec
     FileUtils.mkdir_p('tmp_git_source')
     IO.popen(%w[git init .], chdir: 'tmp_git_source', &:read)
     IO.popen(%w[git commit -m InitialCommit --allow-empty -n], chdir: 'tmp_git_source', &:read)
-    "file://#{File.expand_path('tmp_git_source')}"
+    if RUBY_VERSION >= '2.6'
+      "file:#{File.expand_path('tmp_git_source')}"
+    else
+      "file://#{File.expand_path('tmp_git_source')}"
+    end
   end
 
   let(:podfile) do
