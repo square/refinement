@@ -1,3 +1,6 @@
+inherit_from: .rubocop_todo.yml
+require: rubocop-rspec
+
 AllCops:
   TargetRubyVersion: 2.1
 
@@ -7,6 +10,18 @@ Metrics:
 Metrics/LineLength:
   Enabled: true
   Max: 120
+
+RSpec/ExampleLength:
+  Enabled: false
+
+RSpec/MultipleExpectations:
+  Enabled: false
+
+RSpec/NestedGroups:
+  Enabled: false
+
+Style/AccessModifierDeclarations:
+  Enabled: false
 
 Style/MultilineBlockChain:
   Enabled: false
