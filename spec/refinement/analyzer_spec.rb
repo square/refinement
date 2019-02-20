@@ -203,6 +203,31 @@ RSpec.describe Refinement::Analyzer do
     it { is_expected.to eq 'foo' => 'Gemfile.lock (ruby dependencies) changed', 'bar' => 'Gemfile.lock (ruby dependencies) changed' }
   end
 
+  context 'with augmenting_paths_by_target that reference directories' do
+    project do
+      target 'foo'
+      target 'bar'
+    end
+
+    let(:augmenting_paths_by_target) do
+      {
+        'foo' => [
+          { 'path' => 'a', 'inclusion_reason' => 'dir a' }
+        ],
+        'bar' => [
+          { 'path' => 'b/', 'inclusion_reason' => 'dir b' }
+        ]
+      }
+    end
+
+    changeset do
+      file 'a/a.txt'
+      file 'b/b.txt'
+    end
+
+    it { is_expected.to eq 'foo' => 'a/ (dir a) had contents change', 'bar' => 'b/ (dir b) had contents change' }
+  end
+
   context 'with augmenting_paths_by_target using YAML keypaths' do
     project do
       target 'foo'
