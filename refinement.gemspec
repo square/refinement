@@ -16,7 +16,7 @@ Gem::Specification.new do |spec|
 
   spec.required_ruby_version = '>= 2.1'
 
-  spec.add_runtime_dependency     'xcodeproj', '~> 1.8.0'
+  spec.add_runtime_dependency     'xcodeproj', '>= 1.8.1', '< 2'
 
   spec.add_development_dependency 'rake', '~> 10.0'
 end
