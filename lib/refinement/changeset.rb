@@ -135,7 +135,7 @@ module Refinement
     def self.from_git(repository:, base_revision:)
       merge_base = git!('merge-base', base_revision, 'HEAD', chdir: repository).strip
       diff = git!('diff', '--raw', '-z', merge_base, chdir: repository)
-      modifications = parse_raw_diff(diff, repository: repository, base_revision: base_revision).freeze
+      modifications = parse_raw_diff(diff, repository: repository, base_revision: merge_base).freeze
 
       new(repository: repository, modifications: modifications)
     end
