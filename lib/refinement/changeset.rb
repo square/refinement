@@ -190,7 +190,7 @@ module Refinement
           path: changed_path,
           type: CHANGE_CHARACTERS[change_character],
           prior_path: prior_path,
-          contents_reader: -> { repo.join(changed_path).read },
+          contents_reader: -> { repository.join(changed_path).read },
           prior_contents_reader: lambda {
             git!('show', "#{base_revision}:#{prior_path || changed_path}", chdir: repository)
           }
