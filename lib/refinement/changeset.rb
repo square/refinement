@@ -133,6 +133,9 @@ module Refinement
     # @param repository [Pathname,String]
     # @param base_revision [String]
     def self.from_git(repository:, base_revision:)
+      raise ArgumentError, "must be given a Pathname for repository, got #{repository.inspect}" unless repository.is_a?(Pathname)
+      raise ArgumentError, "must be given a String for base_revision, got #{base_revision.inspect}" unless base_revision.is_a?(String)
+
       merge_base = git!('merge-base', base_revision, 'HEAD', chdir: repository).strip
       diff = git!('diff', '--raw', '-z', merge_base, chdir: repository)
       modifications = parse_raw_diff(diff, repository: repository, base_revision: merge_base).freeze
