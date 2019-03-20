@@ -1,5 +1,11 @@
 # Refinement Changes
 
+## 0.1.2 (2019-03-20)
+
+##### Bug Fixes
+
+* Fix CLI invocation for repository parsing.  
+
 ## 0.1.2 (2019-03-15)
 
 ##### Bug Fixes

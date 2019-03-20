@@ -106,7 +106,7 @@ module Refinement
       private
 
       def compute_changeset
-        Refinement::Changeset.from_git(repository: @repository, base_revision: @base_revision)
+        Refinement::Changeset.from_git(repository: Pathname(@repository), base_revision: @base_revision)
       end
     end
   end
