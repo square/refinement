@@ -130,7 +130,7 @@ module Refinement
     end
 
     # @return [Changeset] the changes in the given git repository between the given revision and HEAD
-    # @param repository [Pathname,String]
+    # @param repository [Pathname]
     # @param base_revision [String]
     def self.from_git(repository:, base_revision:)
       raise ArgumentError, "must be given a Pathname for repository, got #{repository.inspect}" unless repository.is_a?(Pathname)
