@@ -50,9 +50,30 @@ module Refinement
     #   Defaults to `false`
     # @param log_changes [Boolean] whether modifications to the scheme are logged.
     #   Defaults to `false`
+    # @param filter_scheme_for_build_action [:building, :testing]
+    #   The xcodebuild action the scheme is being filtered for. The currently supported values are
+    #   `:building` and `:testing`, with the only difference being `BuildActionEntry` are not
+    #   filtered out when building for testing, since test action macro expansion could
+    #   depend on a build entry being present.
+    #   Defaults to `:building`.
     # @return [Xcodeproj::XCScheme] a scheme whose unchanged targets have been removed
-    def filtered_scheme(scheme_path:, change_level: :full_transitive, filter_when_scheme_has_changed: false, log_changes: false)
+    def filtered_scheme(scheme_path:, change_level: :full_transitive, filter_when_scheme_has_changed: false, log_changes: false,
+                        filter_scheme_for_build_action: :building)
       scheme = Xcodeproj::XCScheme.new(scheme_path)
+
+      sections_to_filter = %w[TestableReference]
+      case filter_scheme_for_build_action
+      when :building
+        sections_to_filter << 'BuildActionEntry'
+      when :testing
+        # don't want to filter out build action entries running
+        # xcodebuild build-for-testing / test, since the test action could have a macro expansion
+        # that depends upon one of the build targets.
+        nil
+      else
+        raise ArgumentError, 'The supported values for the `filter_scheme_for_build_action` parameter are: [:building, :testing]. ' \
+                             "Given: #{filter_scheme_for_build_action.inspect}."
+      end
 
       if filter_when_scheme_has_changed ||
          !UsedPath.new(path: Pathname(scheme_path), inclusion_reason: 'scheme').find_in_changeset(changeset)
@@ -62,10 +83,7 @@ module Refinement
 
         doc = scheme.doc
 
-        xpaths = %w[
-          //*/TestableReference/BuildableReference
-          //*/BuildActionEntry/BuildableReference
-        ]
+        xpaths = sections_to_filter.map { |section| "//*/#{section}/BuildableReference" }
         xpaths.each do |xpath|
           doc.get_elements(xpath).to_a.each do |buildable_reference|
             suite_name = buildable_reference.attributes['BlueprintName']
