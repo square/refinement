@@ -18,7 +18,9 @@ module Refinement
         ['--[no-]print-changes', 'Print the change reason for changed targets'],
         ['--[no-]print-scheme-changes', 'Print the change reason for targets in the given scheme'],
         ['--change-level=LEVEL', 'Change level at which a target must have changed in order to be considered changed. ' \
-                                 'One of `full-transitive`, `itself`, or an integer']
+                                 'One of `full-transitive`, `itself`, or an integer'],
+        ['--filter-scheme-for-build-action=BUILD_ACTION', 'The xcodebuild action the scheme (if given) is filtered for. ' \
+                                                          'One of `building` or `testing`.']
       ]
     end
 
@@ -30,6 +32,7 @@ module Refinement
       @print_changes = argv.flag?('print-changes', false)
       @print_scheme_changes = argv.flag?('print-scheme-changes', false)
       @change_level = argv.option('change-level', 'full-transitive')
+      @filter_scheme_for_build_action = argv.option('filter-scheme-for-build-action', 'testing').to_sym
 
       super
     end
@@ -45,7 +48,7 @@ module Refinement
       puts analyzer.format_changes if @print_changes
 
       return unless @scheme
-      analyzer.filtered_scheme(scheme_path: @scheme, log_changes: @print_scheme_changes)
+      analyzer.filtered_scheme(scheme_path: @scheme, log_changes: @print_scheme_changes, filter_scheme_for_build_action: @filter_scheme_for_build_action)
               .save_as(@scheme.gsub(%r{\.(xcodeproj|xcworkspace)/.+}, '.\1'), File.basename(@scheme, '.xcscheme'), true)
     end
 
