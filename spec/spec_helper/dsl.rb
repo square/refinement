@@ -35,7 +35,31 @@ module SpecHelper
       def initialize
         @project = Xcodeproj::Project.new('/repository/project.xcodeproj')
       end
-      attr_reader :project
+
+      class UUIDGenerator < Xcodeproj::Project::UUIDGenerator
+        def generate_all_paths_by_objects(projects)
+          @paths_by_object = {}
+          projects.each do |project|
+            project_basename = project.path.basename.to_s
+            project.objects.each do |object|
+              @paths_by_object[object] = if object.is_a? Xcodeproj::Project::Object::AbstractTarget
+                                           "#{project_basename}_#{object.name}_TARGET_UUID"
+                                         else
+                                           object.uuid
+                                         end
+            end
+          end
+        end
+
+        def uuid_for_path(path)
+          path
+        end
+      end
+
+      def project
+        UUIDGenerator.new([@project]).generate!
+        @project
+      end
 
       def target(name, type: :library, platform: :ios, &blk)
         @project.new_target(type, name, platform).tap do |target|

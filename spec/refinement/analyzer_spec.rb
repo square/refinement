@@ -297,4 +297,105 @@ RSpec.describe Refinement::Analyzer do
                         'qux' => 'dependency foo_dynamic_library changed because main.swift (source file) changed'
     }
   end
+
+  describe '#filtered_scheme' do
+    subject(:filtered_scheme_to_s) { analyzer.filtered_scheme(scheme_path: scheme_path, change_level: change_level, filter_when_scheme_has_changed: filter_when_scheme_has_changed, log_changes: log_changes, filter_scheme_for_build_action: filter_scheme_for_build_action).to_s }
+
+    let(:analyzer) do
+      described_class.new(changeset: changeset, workspace_path: nil, projects: [project], augmenting_paths_yaml_files: nil, augmenting_paths_by_target: augmenting_paths_by_target)
+    end
+    let(:scheme_path) { '/path/to/scheme.xcscheme' }
+    let(:filter_when_scheme_has_changed) { false }
+    let(:log_changes) { false }
+    let(:filter_scheme_for_build_action) { :building }
+
+    let(:scheme) { Xcodeproj::XCScheme.new }
+    let(:scheme_contents) { scheme.to_s }
+
+    let(:foo) { target(name: 'Foo') }
+    let(:foo_unit_tests) { target(name: 'Foo-Unit-Tests') }
+
+    let(:scheme_fixture_path) { Pathname("../fixtures/#{self.class.name.gsub('::', '/')}.xcscheme").expand_path(__dir__) }
+
+    before do
+      allow(File).to receive(:open).with(scheme_path, 'r') { |&b| b.call scheme_contents }
+    end
+
+    project do
+      foo = target 'Foo' do
+        source_files 'a.swift'
+      end
+
+      target 'Foo-Unit-Tests' do
+        source_files 'a_tests.swift'
+        add_dependency foo
+      end
+    end
+
+    def target(name:)
+      scheme_fixture_path
+      project.targets.find { |t| t.name == name }
+    end
+
+    context 'with an empty scheme' do
+      it 'returns the scheme unmodified' do
+        expect(filtered_scheme_to_s).to eq scheme_contents
+      end
+    end
+
+    context 'when the scheme contains targets' do
+      before do
+        scheme.add_build_target foo
+        scheme.add_test_target foo_unit_tests
+        scheme.set_launch_target foo
+      end
+
+      context 'with a scheme with no modified targets' do
+        it 'returns the scheme without the targets' do
+          expect(filtered_scheme_to_s).to eq(scheme_fixture_path.read), "see #{scheme_fixture_path}"
+        end
+      end
+
+      context 'with a scheme with a modified build target' do
+        changeset { file 'a.swift' }
+
+        it 'returns the scheme unmodified' do
+          expect(filtered_scheme_to_s).to eq(scheme_fixture_path.read), "see #{scheme_fixture_path}"
+        end
+
+        context 'with the change level as full_transitive' do
+          let(:change_level) { :full_transitive }
+
+          it 'returns the modified scheme' do
+            expect(filtered_scheme_to_s).to eq(scheme_fixture_path.read), "see #{scheme_fixture_path}"
+          end
+        end
+      end
+
+      context 'with a scheme with a modified test target' do
+        changeset { file 'a_tests.swift' }
+
+        it 'returns the scheme unmodified' do
+          expect(filtered_scheme_to_s).to eq(scheme_fixture_path.read), "see #{scheme_fixture_path}"
+        end
+
+        context 'when filtering for testing' do
+          let(:change_level) { :full_transitive }
+          let(:filter_scheme_for_build_action) { :testing }
+
+          it 'returns the modified scheme retaining the build entries' do
+            expect(filtered_scheme_to_s).to eq(scheme_fixture_path.read), "see #{scheme_fixture_path}"
+          end
+        end
+
+        context 'with the change level as full_transitive' do
+          let(:change_level) { :full_transitive }
+
+          it 'returns the modified scheme' do
+            expect(filtered_scheme_to_s).to eq(scheme_fixture_path.read), "see #{scheme_fixture_path}"
+          end
+        end
+      end
+    end
+  end
 end
