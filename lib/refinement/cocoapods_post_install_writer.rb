@@ -3,16 +3,17 @@ module Refinement
   # takes into account changes to Pod configuration,
   # as well as the globs used by podspecs to search for files
   class CocoaPodsPostInstallWriter
-    attr_reader :aggregate_targets, :config, :repo, :options
-    private :aggregate_targets, :config, :repo, :options
+    attr_reader :aggregate_targets, :pod_targets, :config, :repo, :options
+    private :aggregate_targets, :pod_targets, :config, :repo, :options
 
     # Initializes a post-install writer with CocoaPods target objects.
     # @return [CocoaPodsPostInstallWriter] a new instance of CocoaPodsPostInstallWriter
     # @param aggregate_targets [Array<Pod::AggregateTarget>]
     # @param config [Pod::Config]
     # @param options [Hash]
-    def initialize(aggregate_targets, config, options)
+    def initialize(aggregate_targets, pod_targets, config, options)
       @aggregate_targets = aggregate_targets
+      @pod_targets = pod_targets
       @config = config
       @repo = config.installation_root
       @options = options || {}
@@ -38,7 +39,7 @@ module Refinement
       aggregate_targets.each do |aggregate_target|
         targets[aggregate_target.label] = paths_for_aggregate_target(aggregate_target)
       end
-      aggregate_targets.flat_map(&:pod_targets).uniq.each do |pod_target|
+      pod_targets.each do |pod_target|
         targets.merge! paths_for_pod_targets(pod_target)
       end
       targets

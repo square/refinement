@@ -13,7 +13,7 @@ Pod::Installer
 
                require 'refinement/cocoapods_post_install_writer'
                Pod::UI.message 'Writing refinement file' do
-                 Refinement::CocoaPodsPostInstallWriter.new(aggregate_targets, config, plugins['refinement']).write!
+                 Refinement::CocoaPodsPostInstallWriter.new(aggregate_targets, pod_targets, config, plugins['refinement']).write!
                end
              end
            end)
