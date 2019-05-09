@@ -1,5 +1,10 @@
 # Refinement Changes
 
+## 0.2.2 (2019-04-08)
+
+No changes.  
+
+
 ## 0.2.1 (2019-04-08)
 
 ##### Bug Fixes
