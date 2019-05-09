@@ -7,7 +7,7 @@ RSpec.describe Refinement::CocoaPodsPostInstallWriter do # rubocop:disable RSpec
     user_project.save
     specifications.each { |s| Pathname(s.name).tap(&:mkpath).join("#{s.name}.podspec.json").open('w') { |f| f << s.to_pretty_json } }
 
-    described_class.new(aggregate_targets, config, options)
+    described_class.new(aggregate_targets, pod_targets, config, options)
   end
 
   around do |example|
@@ -50,6 +50,11 @@ RSpec.describe Refinement::CocoaPodsPostInstallWriter do # rubocop:disable RSpec
       target 'B Mac' do
         pod 'PodB', path: 'PodB/PodB.podspec.json'
         pod 'PodC', path: 'PodC/PodC.podspec.json'
+      end
+
+      abstract_target 'C' do
+        platform :tvos, '11'
+        pod 'PodTV', path: 'PodTV/PodTV.podspec.json'
       end
     end
   end
@@ -95,6 +100,11 @@ RSpec.describe Refinement::CocoaPodsPostInstallWriter do # rubocop:disable RSpec
         s.test_spec 'WhoTestsTheTests' do |test_spec|
           test_spec.dependency 'PodC'
         end
+      end,
+      Pod::Specification.new do |s|
+        s.name = 'PodTV'
+        s.source_files = 'Sources/**/*.m'
+        s.tvos.deployment_target = '10'
       end
     ]
       .each do |s|
@@ -121,10 +131,13 @@ RSpec.describe Refinement::CocoaPodsPostInstallWriter do # rubocop:disable RSpec
     end
   end
 
-  let(:aggregate_targets) do
+  let(:analysis_result) do
     Pod::Installer::Analyzer.new(config.sandbox.tap(&:prepare), podfile)
-                            .analyze.targets
+                            .analyze
   end
+
+  let(:aggregate_targets) { analysis_result.targets }
+  let(:pod_targets) { analysis_result.pod_targets }
 
   let(:config) do
     Pod::Config.instance.tap do |config|
@@ -189,6 +202,11 @@ RSpec.describe Refinement::CocoaPodsPostInstallWriter do # rubocop:disable RSpec
           { 'glob' => 'PodC/Sources/**/*.{h,m}', 'inclusion_reason' => 'source file' },
           { 'glob' => 'PodC/Sources/*.swift', 'inclusion_reason' => 'source file' },
           { 'glob' => 'PodC/SubSpec/Sources/*', 'inclusion_reason' => 'source file' }
+        ],
+        'PodTV' => [
+          { 'inclusion_reason' => 'CocoaPods lockfile', 'path' => 'Podfile.lock', 'yaml_keypath' => ['SPEC CHECKSUMS', 'PodTV'] },
+          { 'inclusion_reason' => 'podspec', 'path' => 'PodTV/PodTV.podspec.json' },
+          { 'glob' => 'PodTV/Sources/**/*.m', 'inclusion_reason' => 'source file' }
         ],
         'Pods-A Tests' => [
           { 'inclusion_reason' => 'user project', 'path' => 'UserProject.xcodeproj' }

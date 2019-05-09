@@ -1,5 +1,12 @@
 # Refinement Changes
 
+## 0.2.1 (2019-04-08)
+
+##### Bug Fixes
+
+* Record augmenting paths for pods that are not linked against any user targets.  
+
+
 ## 0.2.0 (2019-03-21)
 
 ##### Enhancements
