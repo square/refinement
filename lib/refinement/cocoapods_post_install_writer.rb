@@ -9,6 +9,7 @@ module Refinement
     # Initializes a post-install writer with CocoaPods target objects.
     # @return [CocoaPodsPostInstallWriter] a new instance of CocoaPodsPostInstallWriter
     # @param aggregate_targets [Array<Pod::AggregateTarget>]
+    # @param pod_targets [Array<Pod::PodTarget>]
     # @param config [Pod::Config]
     # @param options [Hash]
     def initialize(aggregate_targets, pod_targets, config, options)
