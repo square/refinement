@@ -1,5 +1,13 @@
 # Refinement Changes
 
+## Master
+
+##### Bug Fixes
+
+* Multiple YAML used keys paths for the same file will no longer cause the YAML
+  to be parsed multiple times.  
+
+
 ## 0.2.2 (2019-04-08)
 
 No changes.  
