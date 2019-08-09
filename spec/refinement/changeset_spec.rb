@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 RSpec.describe Refinement::Changeset do
   let(:directory_type) { described_class::FileModification::DIRECTORY_CHANGE_TYPE }
 

@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module Refinement
   # Called after CocoaPods installation to write an augmenting file that
   # takes into account changes to Pod configuration,

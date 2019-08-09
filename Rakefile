@@ -18,9 +18,11 @@ end
 task :ensure_clean do
   out, status = Open3.capture2('git', 'status', '--porcelain')
   raise 'running git status failed' unless status.success?
+
   changed_files = out.each_line.map do |line|
     change, _path = line.chomp.split(/\s+/, 2)
     next if change == '??'
+
     line
   end.compact
 

@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 RSpec.describe Refinement::UsedPath do
   subject(:used_path) { described_class.new(path: path, inclusion_reason: inclusion_reason) }
 

@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'xcodeproj'
 
 # Generates a list of Xcode targets to build & test as a result of a git diff.

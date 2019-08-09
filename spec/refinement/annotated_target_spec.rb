@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 RSpec.describe Refinement::AnnotatedTarget do
   subject(:annotated_target) { described_class.new(target: target, change_reason: change_reason, dependencies: dependencies) }
 

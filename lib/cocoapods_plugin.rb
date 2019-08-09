@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'cocoapods'
 
 Pod::Installer
@@ -7,9 +9,7 @@ Pod::Installer
 
                return unless plugins.key?('refinement')
 
-               unless Gem::Version.create(Pod::VERSION) >= Gem::Version.create('1.6.0')
-                 raise Pod::Informative, 'Refinement requires a CocoaPods version >= 1.6.0'
-               end
+               raise Pod::Informative, 'Refinement requires a CocoaPods version >= 1.6.0' unless Gem::Version.create(Pod::VERSION) >= Gem::Version.create('1.6.0')
 
                require 'refinement/cocoapods_post_install_writer'
                Pod::UI.message 'Writing refinement file' do

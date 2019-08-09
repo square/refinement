@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module Refinement
   # Analyzes changes in a repository
   # and determines how those changes impact the targets in Xcode projects in the workspace.
@@ -26,12 +28,12 @@ module Refinement
       @changeset = changeset
 
       raise ArgumentError, 'Can only specify one of workspace_path and projects' if workspace_path && projects
+
       @workspace_path = workspace_path
       @projects = projects
 
-      if augmenting_paths_yaml_files && augmenting_paths_by_target
-        raise ArgumentError, 'Can only specify one of augmenting_paths_yaml_files and augmenting_paths_by_target'
-      end
+      raise ArgumentError, 'Can only specify one of augmenting_paths_yaml_files and augmenting_paths_by_target' if augmenting_paths_yaml_files && augmenting_paths_by_target
+
       @augmenting_paths_yaml_files = augmenting_paths_yaml_files
       @augmenting_paths_by_target = augmenting_paths_by_target
     end
@@ -110,6 +112,7 @@ module Refinement
                                    .map do |annotated_target|
           change_reason = annotated_target.change_reason(level: change_level)
           next if !include_unchanged_targets && !change_reason
+
           change_reason ||= 'did not change'
           "\t#{annotated_target.xcode_target}: #{change_reason}"
         end.compact
@@ -152,6 +155,7 @@ module Refinement
       targets_by_name = Hash[targets.map { |t| [t.name, t] }]
       targets_by_product_name = Hash[targets.map do |t|
         next unless t.respond_to?(:product_reference)
+
         [File.basename(t.product_reference.path), t]
       end.compact]
 
@@ -166,7 +170,7 @@ module Refinement
         # yay auto-linking
         if (phase = target.frameworks_build_phases)
           phase.files_references.each do |fr|
-            if (dt = fr && fr.path && targets_by_product_name[File.basename(fr.path)])
+            if (dt = fr&.path && targets_by_product_name[File.basename(fr.path)])
               target_dependencies << dt
             end
           end
@@ -232,6 +236,7 @@ module Refinement
 
       expand_build_settings = lambda do |s|
         return [s] unless s =~ /\$(?:\{([_a-zA-Z0-0]+?)\}|\(([_a-zA-Z0-0]+?)\))/
+
         match, key = Regexp.last_match.values_at(0, 1, 2).compact
         substitutions = target.resolved_build_setting(key, true).values.compact.uniq
         substitutions.flat_map do |sub|
@@ -242,6 +247,7 @@ module Refinement
       target.build_configuration_list.build_configurations.each do |build_configuration|
         ref = build_configuration.base_configuration_reference
         next unless ref
+
         yield UsedPath.new(path: ref.real_path,
                            inclusion_reason: "base configuration reference for #{build_configuration}")
       end
@@ -249,6 +255,7 @@ module Refinement
       target.build_phases.each do |build_phase|
         build_phase.files_references.each do |fr|
           next unless fr
+
           yield UsedPath.new(path: fr.real_path,
                              inclusion_reason: "#{build_phase.display_name.downcase.chomp('s')} file")
         end
@@ -257,9 +264,11 @@ module Refinement
       target.shell_script_build_phases.each do |shell_script_build_phase|
         %w[input_file_list_paths output_file_list_paths input_paths output_paths].each do |method|
           next unless (paths = shell_script_build_phase.public_send(method))
+
           file_type = method.tr('_', ' ').chomp('s')
           paths.each do |config_path|
             next unless config_path
+
             expand_build_settings[config_path].each do |path|
               path = Pathname(path).expand_path(target.project.project_dir)
               yield UsedPath.new(path: path,
@@ -273,6 +282,7 @@ module Refinement
         target.resolved_build_setting(build_setting, true).each_value do |paths|
           Array(paths).each do |path|
             next unless path
+
             path = Pathname(path).expand_path(target.project.project_dir)
             yield UsedPath.new(path: path, inclusion_reason: "#{build_setting} value")
           end
@@ -301,6 +311,7 @@ module Refinement
       project.root_object.build_configuration_list.build_configurations.each do |build_configuration|
         ref = build_configuration.base_configuration_reference
         next unless ref
+
         yield UsedPath.new(path: ref.real_path,
                            inclusion_reason: "base configuration reference for #{build_configuration}")
       end

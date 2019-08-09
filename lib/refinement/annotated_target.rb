@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module Refinement
   # A target, annotated with any changes
   class AnnotatedTarget
@@ -45,15 +47,18 @@ module Refinement
         when :full_transitive
           direct_change_reason || Refinement.map_find(dependencies) do |dependency|
             next unless (dependency_change_reason = dependency.change_reason(level: level))
+
             "dependency #{dependency} changed because #{dependency_change_reason}"
           end
         when proc { |symbol, int| (symbol == :at_most_n_away) && int.is_a?(Integer) }
           distance_from_target = level.last
-          raise ArgumentError, "level must be positive, not #{distance_from_target}" if distance_from_target < 0
+          raise ArgumentError, "level must be positive, not #{distance_from_target}" if distance_from_target.negative?
+
           change_reason = direct_change_reason
-          if distance_from_target > 0
+          if distance_from_target.positive?
             change_reason ||= Refinement.map_find(dependencies) do |dependency|
               next unless (dependency_change_reason = dependency.change_reason(level: [:at_most_n_away, level.last.pred]))
+
               "dependency #{dependency} changed because #{dependency_change_reason}"
             end
           end

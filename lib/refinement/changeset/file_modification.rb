@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module Refinement
   class Changeset
     # Represents a modification to a single file or directory on disk
@@ -51,12 +53,14 @@ module Refinement
       # @visibility private
       def ==(other)
         return unless other.is_a?(FileModification)
+
         (path == other.path) && (type == other.type) && prior_path == other.prior_path
       end
 
       # @visibility private
       def eql?(other)
         return unless other.is_a?(FileModification)
+
         path.eql?(other.path) && type.eql?(other.type) && prior_path.eql?(other.prior_path)
       end
 
@@ -72,6 +76,7 @@ module Refinement
 
         dig_yaml = lambda do |yaml, path|
           return yaml if DOES_NOT_EXIST == yaml
+
           object = @cached_yaml[path] ||= YAML.safe_load(yaml, [Symbol])
           if keypath.empty?
             object
