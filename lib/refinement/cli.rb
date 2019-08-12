@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'claide'
 
 module Refinement
@@ -48,6 +50,7 @@ module Refinement
       puts analyzer.format_changes if @print_changes
 
       return unless @scheme
+
       analyzer.filtered_scheme(scheme_path: @scheme, log_changes: @print_scheme_changes, filter_scheme_for_build_action: @filter_scheme_for_build_action)
               .save_as(@scheme.gsub(%r{\.(xcodeproj|xcworkspace)/.+}, '.\1'), File.basename(@scheme, '.xcscheme'), true)
     end

@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'refinement/cocoapods_post_install_writer'
 
 require 'cocoapods'

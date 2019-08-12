@@ -8,10 +8,7 @@ gemspec
 
 gem 'inch_by_inch', '~> 1.0.1'
 gem 'rspec', '~> 3.7'
-gem 'rubocop', '~> 0.57.2'
+gem 'rubocop'
 gem 'rubocop-rspec'
 
-# Needed until 1.7.0.beta.1 is released, since there is a test that touches
-# app specs
-gem 'cocoapods', github: 'CocoaPods/CocoaPods'
-gem 'cocoapods-core', github: 'CocoaPods/Core'
+gem 'cocoapods', '>= 1.8.0.beta.1'

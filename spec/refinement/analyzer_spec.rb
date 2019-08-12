@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'spec_helper/dsl'
 
 RSpec.describe Refinement::Analyzer do

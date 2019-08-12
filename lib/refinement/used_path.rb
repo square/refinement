@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module Refinement
   # Represents a path that some target depends upon.
   class UsedPath

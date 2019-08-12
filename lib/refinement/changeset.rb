@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'cocoapods/executable'
 require 'set'
 
@@ -43,6 +45,7 @@ module Refinement
       dirs = Set.new
       add = lambda { |path|
         break unless dirs.add?(path)
+
         add[path.dirname]
       }
       modifications.each do |mod|
@@ -124,8 +127,10 @@ module Refinement
     # @param keypath [Array]
     def find_modification_for_yaml_keypath(absolute_path:, keypath:)
       return unless (file_modification = find_modification_for_path(absolute_path: absolute_path))
+
       diff = file_modification.yaml_diff(keypath)
       return unless diff
+
       [file_modification, diff]
     end
 
@@ -144,14 +149,14 @@ module Refinement
     end
 
     CHANGE_TYPES = {
-      :'was added' => 'A',
-      :'was copied' => 'C',
-      :'was deleted' => 'D',
-      :'was modified' => 'M',
-      :'was renamed' => 'R',
-      :'changed type' => 'T',
-      :'is unmerged' => 'U',
-      :'changed in an unknown way' => 'X'
+      'was added': 'A',
+      'was copied': 'C',
+      'was deleted': 'D',
+      'was modified': 'M',
+      'was renamed': 'R',
+      'changed type': 'T',
+      'is unmerged': 'U',
+      'changed in an unknown way': 'X'
     }.freeze
     private_constant :CHANGE_TYPES
 
@@ -206,9 +211,8 @@ module Refinement
     def self.git!(command, *args, chdir:)
       require 'open3'
       out, err, status = Open3.capture3('git', command, *args, chdir: chdir.to_s)
-      unless status.success?
-        raise GitError, "Running git #{command} failed (#{status.to_s.gsub(/pid \d+\s*/, '')}):\n\n#{err}"
-      end
+      raise GitError, "Running git #{command} failed (#{status.to_s.gsub(/pid \d+\s*/, '')}):\n\n#{err}" unless status.success?
+
       out
     end
     private_class_method :git!

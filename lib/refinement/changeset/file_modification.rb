@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module Refinement
   class Changeset
     # Represents a modification to a single file or directory on disk
@@ -51,12 +53,14 @@ module Refinement
       # @visibility private
       def ==(other)
         return unless other.is_a?(FileModification)
+
         (path == other.path) && (type == other.type) && prior_path == other.prior_path
       end
 
       # @visibility private
       def eql?(other)
         return unless other.is_a?(FileModification)
+
         path.eql?(other.path) && type.eql?(other.type) && prior_path.eql?(other.prior_path)
       end
 
@@ -68,9 +72,12 @@ module Refinement
       def yaml_diff(keypath)
         require 'yaml'
 
-        dig_yaml = lambda do |yaml|
+        @cached_yaml ||= {}
+
+        dig_yaml = lambda do |yaml, path|
           return yaml if DOES_NOT_EXIST == yaml
-          object = YAML.safe_load(yaml, [Symbol])
+
+          object = @cached_yaml[path] ||= YAML.safe_load(yaml, [Symbol])
           if keypath.empty?
             object
           elsif object.respond_to?(:dig)
@@ -82,8 +89,8 @@ module Refinement
           end
         end
 
-        prior = dig_yaml[prior_contents]
-        current = dig_yaml[contents]
+        prior = dig_yaml[prior_contents, :prior]
+        current = dig_yaml[contents, :current]
 
         require 'xcodeproj/differ'
 

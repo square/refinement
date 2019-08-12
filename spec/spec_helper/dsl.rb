@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module SpecHelper
   module DSL
     def build_changeset(*args, &blk)

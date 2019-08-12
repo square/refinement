@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 RSpec.describe Refinement::Changeset::FileModification do
   subject(:file_modification) { described_class.new(path: path, type: type, prior_path: prior_path, contents_reader: contents_reader, prior_contents_reader: prior_contents_reader) }
 
