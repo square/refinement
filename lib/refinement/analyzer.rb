@@ -153,11 +153,11 @@ module Refinement
       targets = projects.flat_map(&:targets)
       targets_by_uuid = Hash[targets.map { |t| [t.uuid, t] }]
       targets_by_name = Hash[targets.map { |t| [t.name, t] }]
-      targets_by_product_name = Hash[targets.map do |t|
+      targets_by_product_name = targets.each_with_object({}) do |t, h|
         next unless t.respond_to?(:product_reference)
-
-        [File.basename(t.product_reference.path), t]
-      end.compact]
+        h[File.basename(t.product_reference.path)] = t
+        h[File.basename(t.product_reference.name)] = t if t.product_reference.name
+      end
 
       find_dep = ->(td) { targets_by_uuid[td.native_target_uuid] || targets_by_name[td.name] }
       target_deps = lambda do |target|

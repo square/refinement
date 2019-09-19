@@ -268,6 +268,11 @@ RSpec.describe Refinement::Analyzer do
         source_files 'main.swift'
         product_reference.path = 'foo.framework'
       end
+      target 'foo_framework_with_name_and_different_path', type: :framework do
+        source_files 'main.swift'
+        product_reference.path = 'foo-framework-with-name.framework'
+        product_reference.name = 'foo_framework_with_name.framework'
+      end
       target 'foo_static_library', type: :library do
         source_files 'main.swift'
         product_reference.path = 'libFoo.a'
@@ -285,6 +290,9 @@ RSpec.describe Refinement::Analyzer do
       target 'qux' do
         frameworks_build_phases.add_file_reference(project.new_file('libFoo.dylib'))
       end
+      target 'quux' do
+        frameworks_build_phases.add_file_reference(project.new_file('foo_framework_with_name.framework'))
+      end
     end
 
     changeset do
@@ -295,8 +303,10 @@ RSpec.describe Refinement::Analyzer do
                         'baz' => 'dependency foo_static_library changed because main.swift (source file) changed',
                         'foo_dynamic_library' => 'main.swift (source file) changed',
                         'foo_framework' => 'main.swift (source file) changed',
+                        'foo_framework_with_name_and_different_path' => 'main.swift (source file) changed',
                         'foo_static_library' => 'main.swift (source file) changed',
-                        'qux' => 'dependency foo_dynamic_library changed because main.swift (source file) changed'
+                        'qux' => 'dependency foo_dynamic_library changed because main.swift (source file) changed',
+                        'quux' => 'dependency foo_framework_with_name_and_different_path changed because main.swift (source file) changed'
     }
   end
 
