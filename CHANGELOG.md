@@ -1,5 +1,12 @@
 # Refinement Changes
 
+## 0.3.1 (2019-08-09)
+
+##### Bug Fixes
+
+* Take into consideration product reference names when refinining.
+
+
 ## 0.3.0 (2019-08-09)
 
 ##### Bug Fixes
