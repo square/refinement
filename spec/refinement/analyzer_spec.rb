@@ -330,7 +330,8 @@ RSpec.describe Refinement::Analyzer do
     let(:scheme_fixture_path) { Pathname("../fixtures/#{self.class.name.gsub('::', '/')}.xcscheme").expand_path(__dir__) }
 
     before do
-      allow(File).to receive(:open).with(scheme_path, 'r') { |&b| b.call scheme_contents }
+      # Must be done inside a block instead of with `and_yield` so the scheme can be modified
+      allow(File).to receive(:open).with(scheme_path, 'r') { |&b| b.call scheme_contents } # rubocop:disable RSpec/Yield
     end
 
     project do
