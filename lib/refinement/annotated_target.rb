@@ -57,7 +57,9 @@ module Refinement
           change_reason = direct_change_reason
           if distance_from_target.positive?
             change_reason ||= Refinement.map_find(dependencies) do |dependency|
-              next unless (dependency_change_reason = dependency.change_reason(level: [:at_most_n_away, level.last.pred]))
+              unless (dependency_change_reason = dependency.change_reason(level: [:at_most_n_away, level.last.pred]))
+                next
+              end
 
               "dependency #{dependency} changed because #{dependency_change_reason}"
             end
