@@ -4,12 +4,11 @@ require: rubocop-rspec
 AllCops:
   TargetRubyVersion: 2.3
 
-Metrics:
+Layout/LineLength:
   Enabled: false
 
-Metrics/LineLength:
-  Enabled: true
-  Max: 120
+Metrics:
+  Enabled: false
 
 RSpec/ExampleLength:
   Enabled: false
