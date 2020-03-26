@@ -376,6 +376,15 @@ RSpec.describe Refinement::Analyzer do
           expect(filtered_scheme_to_s).to eq(scheme_fixture_path.read), "see #{scheme_fixture_path}"
         end
 
+        context 'when filtering for testing' do
+          let(:change_level) { :full_transitive }
+          let(:filter_scheme_for_build_action) { :testing }
+
+          it 'returns the modified scheme retaining the build entries' do
+            expect(filtered_scheme_to_s).to eq(scheme_fixture_path.read), "see #{scheme_fixture_path}"
+          end
+        end
+
         context 'with the change level as full_transitive' do
           let(:change_level) { :full_transitive }
 
