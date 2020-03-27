@@ -77,25 +77,38 @@ module Refinement
                 "Given: #{filter_scheme_for_build_action.inspect}."
         end
 
-      if filter_when_scheme_has_changed ||
-         !UsedPath.new(path: Pathname(scheme_path), inclusion_reason: 'scheme').find_in_changeset(changeset)
+      if !filter_when_scheme_has_changed &&
+         UsedPath.new(path: Pathname(scheme_path), inclusion_reason: 'scheme').find_in_changeset(changeset)
+        return scheme
+      end
 
-        changes_by_suite_name = Hash[annotate_targets!
-                                .map { |at| [at.xcode_target.name, at.change_reason(level: change_level)] }]
+      changes_by_suite_name = Hash[annotate_targets!
+                              .map { |at| [at.xcode_target.name, at.change_reason(level: change_level)] }]
 
-        doc = scheme.doc
+      doc = scheme.doc
 
-        xpaths = sections_to_filter.map { |section| "//*/#{section}/BuildableReference" }
-        xpaths.each do |xpath|
-          doc.get_elements(xpath).to_a.each do |buildable_reference|
-            suite_name = buildable_reference.attributes['BlueprintName']
-            if (change_reason = changes_by_suite_name[suite_name])
-              puts "#{suite_name} changed because #{change_reason}" if log_changes
-              next
-            end
-            puts "#{suite_name} did not change, removing from scheme" if log_changes
-            buildable_reference.parent.remove
+      xpaths = sections_to_filter.map { |section| "//*/#{section}/BuildableReference" }
+      xpaths.each do |xpath|
+        doc.get_elements(xpath).to_a.each do |buildable_reference|
+          suite_name = buildable_reference.attributes['BlueprintName']
+          if (change_reason = changes_by_suite_name[suite_name])
+            puts "#{suite_name} changed because #{change_reason}" if log_changes
+            next
           end
+          puts "#{suite_name} did not change, removing from scheme" if log_changes
+          buildable_reference.parent.remove
+        end
+      end
+
+      if filter_scheme_for_build_action == :testing
+        doc.get_elements('//*/BuildActionEntry/BuildableReference').to_a.each do |buildable_reference|
+          suite_name = buildable_reference.attributes['BlueprintName']
+          if (change_reason = changes_by_suite_name[suite_name])
+            puts "#{suite_name} changed because #{change_reason}" if log_changes
+            next
+          end
+          puts "#{suite_name} did not change, setting to not build for testing" if log_changes
+          buildable_reference.parent.attributes['buildForTesting'] = 'NO'
         end
       end
 

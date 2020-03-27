@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    refinement (0.3.1)
+    refinement (0.4.0)
       xcodeproj (>= 1.8.1, < 2)
 
 GEM
