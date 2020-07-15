@@ -19,7 +19,17 @@ module Refinement
     # @return [Nil, String] If the path has been modified, a string explaining the modification
     # @param changeset [Changeset] the changeset to search for a modification to this path
     def find_in_changeset(changeset)
-      add_reason changeset.find_modification_for_path(absolute_path: path)
+      add_reason changeset.find_modification_for_path(absolute_path: path), changeset: changeset
+    end
+
+    # @return [Nil, String] If the path has been modified, a string explaining the modification
+    # @param changesets [Array<Changeset>] the changesets to search for a modification to this path
+    def find_in_changesets(changesets)
+      raise ArgumentError, 'Must provide at least one changeset' if changesets.empty?
+
+      changesets.reduce(true) do |explanation, changeset|
+        explanation && find_in_changeset(changeset)
+      end
     end
 
     # @return [String]
@@ -33,10 +43,22 @@ module Refinement
     # @return [Nil, String] A string suitable for user display that explains
     #   why the given modification means a target is modified
     # @param modification [Nil, FileModification]
-    def add_reason(modification)
+    # @param changeset [Changeset]
+    def add_reason(modification, changeset:)
       return unless modification
 
-      "#{modification.path} (#{inclusion_reason}) #{modification.type}"
+      add_changeset_description "#{modification.path} (#{inclusion_reason}) #{modification.type}", changeset: changeset
+    end
+
+    # @return [String] A string suitable for user display that explains
+    #   why the given modification means a target is modified, including the description
+    #   of the changeset that contains the modification
+    # @param description [String]
+    # @param changeset [Nil, Changeset]
+    def add_changeset_description(description, changeset:)
+      return description unless changeset&.description
+
+      description + " (#{changeset.description})"
     end
 
     # Represents a path to a YAML file that some target depends upon,
@@ -54,7 +76,7 @@ module Refinement
       # (see UsedPath#find_in_changeset)
       def find_in_changeset(changeset)
         modification, _yaml_diff = changeset.find_modification_for_yaml_keypath(absolute_path: path, keypath: yaml_keypath)
-        add_reason modification
+        add_reason modification, changeset: changeset
       end
 
       # (see UsedPath#to_s)
@@ -65,7 +87,7 @@ module Refinement
       private
 
       # (see UsedPath#add_reason)
-      def add_reason(modification)
+      def add_reason(modification, changeset:)
         return unless modification
 
         keypath_string =
@@ -74,7 +96,7 @@ module Refinement
           else
             ' @ ' + yaml_keypath.map { |path| path.to_s =~ /\A[a-zA-Z0-9_]+\z/ ? path : path.inspect }.join('.')
           end
-        "#{modification.path}#{keypath_string} (#{inclusion_reason}) #{modification.type}"
+        add_changeset_description "#{modification.path}#{keypath_string} (#{inclusion_reason}) #{modification.type}", changeset: changeset
       end
     end
   end
@@ -96,7 +118,16 @@ module Refinement
 
     # (see UsedPath#find_in_changeset)
     def find_in_changeset(changeset)
-      add_reason changeset.find_modification_for_glob(absolute_glob: glob)
+      add_reason changeset.find_modification_for_glob(absolute_glob: glob), changeset: changeset
+    end
+
+    # (see UsedPath#find_in_changesets)
+    def find_in_changesets(changesets)
+      raise ArgumentError, 'Must provide at least one changeset' if changesets.empty?
+
+      changesets.reduce(true) do |explanation, changeset|
+        explanation && find_in_changeset(changeset)
+      end
     end
 
     # (see UsedPath#to_s)
@@ -107,10 +138,17 @@ module Refinement
     private
 
     # (see UsedPath#add_reason)
-    def add_reason(modification)
+    def add_reason(modification, changeset:)
       return unless modification
 
-      "#{modification.path} (#{inclusion_reason}) #{modification.type}"
+      add_changeset_description "#{modification.path} (#{inclusion_reason}) #{modification.type}", changeset: changeset
+    end
+
+    # (see UsedPath#add_changeset_description)
+    def add_changeset_description(description, changeset:)
+      return description unless changeset&.description
+
+      description + " (#{changeset.description})"
     end
   end
 end
