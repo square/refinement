@@ -30,8 +30,25 @@ RSpec.describe Refinement::CocoaPodsPostInstallWriter do # rubocop:disable RSpec
     "file://#{File.expand_path('tmp_git_source')}"
   end
 
+  let(:tmp_git_pod_source) do
+    FileUtils.mkdir_p('tmp_git_pod_source')
+    IO.popen(%w[git init .], chdir: 'tmp_git_pod_source', &:read)
+    Pod::Specification.new do |s|
+      s.name = 'PodGit'
+      s.source_files = 'Sources/**/*.m'
+      s.watchos.deployment_target = '10'
+    end.tap do |s|
+      add_podspec_values(s)
+      Pathname('tmp_git_pod_source').join("#{s.name}.podspec.json").open('w') { |f| f << s.to_pretty_json }
+    end
+    IO.popen(%w[git add .], chdir: 'tmp_git_pod_source', &:read)
+    IO.popen(%w[git commit -m InitialCommit --allow-empty -n], chdir: 'tmp_git_pod_source', &:read)
+    "file://#{File.expand_path('tmp_git_pod_source')}"
+  end
+
   let(:podfile) do
     source_url = tmp_git_source
+    git_pod_url = tmp_git_pod_source
     Pod::Podfile.new do
       source source_url
 
@@ -57,6 +74,11 @@ RSpec.describe Refinement::CocoaPodsPostInstallWriter do # rubocop:disable RSpec
       abstract_target 'C' do
         platform :tvos, '11'
         pod 'PodTV', path: 'PodTV/PodTV.podspec.json'
+      end
+
+      abstract_target 'D' do
+        platform :watchos, '11'
+        pod 'PodGit', git: git_pod_url
       end
     end
   end
@@ -110,16 +132,7 @@ RSpec.describe Refinement::CocoaPodsPostInstallWriter do # rubocop:disable RSpec
       end
     ]
       .each do |s|
-        s.version = '1.0'
-        s.authors = ['None']
-        s.license = 'None'
-        s.homepage = 'https://example.com'
-        s.source = { git: 'none' }
-        s.summary = 'summary'
-
-        s.ios.deployment_target = '11'
-        s.watchos.deployment_target = '11'
-        s.macos.deployment_target = '10.11'
+        add_podspec_values(s)
       end
   end
 
@@ -151,6 +164,19 @@ RSpec.describe Refinement::CocoaPodsPostInstallWriter do # rubocop:disable RSpec
 
   let(:options) do
     { 'pretty_print_json' => true }
+  end
+
+  def add_podspec_values(spec)
+    spec.version = '1.0'
+    spec.authors = ['None']
+    spec.license = 'None'
+    spec.homepage = 'https://example.com'
+    spec.source = { git: 'none' }
+    spec.summary = 'summary'
+
+    spec.ios.deployment_target = '11'
+    spec.watchos.deployment_target = '11'
+    spec.macos.deployment_target = '10.11'
   end
 
   describe '#write!' do
@@ -209,6 +235,12 @@ RSpec.describe Refinement::CocoaPodsPostInstallWriter do # rubocop:disable RSpec
           { 'inclusion_reason' => 'CocoaPods lockfile', 'path' => 'Podfile.lock', 'yaml_keypath' => ['SPEC CHECKSUMS', 'PodTV'] },
           { 'inclusion_reason' => 'podspec', 'path' => 'PodTV/PodTV.podspec.json' },
           { 'glob' => 'PodTV/Sources/**/*.m', 'inclusion_reason' => 'source file' }
+        ],
+        'PodGit' => [
+          { 'inclusion_reason' => 'CocoaPods lockfile', 'path' => 'Podfile.lock', 'yaml_keypath' => ['SPEC CHECKSUMS', 'PodGit'] },
+          { 'inclusion_reason' => 'Dependency external source', 'path' => 'Podfile.lock', 'yaml_keypath' => ['EXTERNAL SOURCES', 'PodGit'] },
+          { 'inclusion_reason' => 'Pod checkout options', 'path' => 'Podfile.lock', 'yaml_keypath' => ['CHECKOUT OPTIONS', 'PodGit'] },
+          { 'glob' => 'Pods/PodGit/Sources/**/*.m', 'inclusion_reason' => 'source file' }
         ],
         'Pods-A Tests' => [
           { 'inclusion_reason' => 'user project', 'path' => 'UserProject.xcodeproj' }
