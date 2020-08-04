@@ -103,6 +103,10 @@ module Refinement
             inclusion_reason: 'CocoaPods lockfile',
             yaml_keypath: ['SPEC CHECKSUMS', pod_target.pod_name] }
         ]
+        if pod_target.sandbox.predownloaded?(pod_target.pod_name)
+          paths << { path: 'Podfile.lock', inclusion_reason: 'Dependency external source', yaml_keypath: ['EXTERNAL SOURCES', pod_target.pod_name] }
+          paths << { path: 'Podfile.lock', inclusion_reason: 'Pod checkout options', yaml_keypath: ['CHECKOUT OPTIONS', pod_target.pod_name] }
+        end
         spec_paths.each { |path| paths << { path: path, inclusion_reason: 'podspec' } }
 
         Pod::Validator::FILE_PATTERNS.each do |pattern|
