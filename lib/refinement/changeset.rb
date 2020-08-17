@@ -18,12 +18,15 @@ module Refinement
     attr_reader :modified_paths
     # @return [Hash<Pathname,FileModification>] modifications keyed by relative path
     attr_reader :modified_absolute_paths
+    # @return [String] a desciption of the changeset
+    attr_reader :description
 
     private :modifications, :modified_paths, :modified_absolute_paths
 
-    def initialize(repository:, modifications:)
+    def initialize(repository:, modifications:, description: nil)
       @repository = repository
       @modifications = self.class.add_directories(modifications).uniq.freeze
+      @description = description
 
       @modified_paths = {}
       @modifications
@@ -145,7 +148,7 @@ module Refinement
       diff = git!('diff', '--raw', '-z', merge_base, chdir: repository)
       modifications = parse_raw_diff(diff, repository: repository, base_revision: merge_base).freeze
 
-      new(repository: repository, modifications: modifications)
+      new(repository: repository, modifications: modifications, description: "since #{base_revision}")
     end
 
     CHANGE_TYPES = {

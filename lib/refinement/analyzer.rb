@@ -4,11 +4,11 @@ module Refinement
   # Analyzes changes in a repository
   # and determines how those changes impact the targets in Xcode projects in the workspace.
   class Analyzer
-    attr_reader :changeset, :workspace_path, :augmenting_paths_yaml_files
-    private :changeset, :workspace_path, :augmenting_paths_yaml_files
+    attr_reader :changesets, :workspace_path, :augmenting_paths_yaml_files
+    private :changesets, :workspace_path, :augmenting_paths_yaml_files
 
-    # Initializes an analyzer with a changeset, projects, and augmenting paths.
-    # @param changeset [Changeset]
+    # Initializes an analyzer with changesets, projects, and augmenting paths.
+    # @param changesets [Array<Changeset>]
     # @param workspace_path [Pathname] path to a root workspace or project,
     #   must be `nil` if `projects` are specified explicitly
     # @param projects [Array<Xcodeproj::Project>] projects to find targets in,
@@ -22,10 +22,10 @@ module Refinement
     #
     # @raise [ArgumentError] when conflicting arguments are given
     #
-    def initialize(changeset:, workspace_path:, projects: nil,
+    def initialize(changesets:, workspace_path:, projects: nil,
                    augmenting_paths_yaml_files:, augmenting_paths_by_target: nil)
 
-      @changeset = changeset
+      @changesets = changesets
 
       raise ArgumentError, 'Can only specify one of workspace_path and projects' if workspace_path && projects
 
@@ -78,7 +78,7 @@ module Refinement
         end
 
       if !filter_when_scheme_has_changed &&
-         UsedPath.new(path: Pathname(scheme_path), inclusion_reason: 'scheme').find_in_changeset(changeset)
+         UsedPath.new(path: Pathname(scheme_path), inclusion_reason: 'scheme').find_in_changesets(changesets)
         return scheme
       end
 
@@ -145,7 +145,7 @@ module Refinement
       @augmenting_paths_by_target ||= begin
         require 'yaml'
         augmenting_paths_yaml_files.reduce({}) do |augmenting_paths_by_target, yaml_file|
-          yaml_file = Pathname(yaml_file).expand_path(changeset.repository)
+          yaml_file = Pathname(yaml_file).expand_path(changesets.first.repository)
           yaml = YAML.safe_load(yaml_file.read)
           augmenting_paths_by_target.merge(yaml) do |_target_name, prior_paths, new_paths|
             prior_paths + new_paths
@@ -157,9 +157,9 @@ module Refinement
     # @return [Array<AnnotatedTarget>] targets in the given list of Xcode projects,
     #   annotated according to the given changeset
     def annotated_targets
-      workspace_modification = find_workspace_modification_in_changeset
+      workspace_modification = find_workspace_modification_in_changesets
       project_changes = Hash[projects.map do |project|
-        [project, find_project_modification_in_changeset(project: project) || workspace_modification]
+        [project, find_project_modification_in_changesets(project: project) || workspace_modification]
       end]
 
       require 'tsort'
@@ -198,7 +198,7 @@ module Refinement
       )
 
       targets.each_with_object({}) do |target, h|
-        change_reason = project_changes[target.project] || find_target_modification_in_changeset(target: target)
+        change_reason = project_changes[target.project] || find_target_modification_in_changesets(target: target)
 
         h[target] = AnnotatedTarget.new(
           target: target,
@@ -306,11 +306,11 @@ module Refinement
     # @return [FileModification,Nil] a modification to a file that is used by the given target, or `nil`
     #   if none if found
     # @param target [Xcodeproj::Project::AbstractTarget]
-    def find_target_modification_in_changeset(target:)
+    def find_target_modification_in_changesets(target:)
       augmenting_paths = used_paths_from_augmenting_paths_by_target[target.name]
-      find_in_changeset = ->(path) { path.find_in_changeset(changeset) }
-      Refinement.map_find(augmenting_paths, &find_in_changeset) ||
-        Refinement.map_find(target_each_file_path(target: target), &find_in_changeset)
+      find_in_changesets = ->(path) { path.find_in_changesets(changesets) }
+      Refinement.map_find(augmenting_paths, &find_in_changesets) ||
+        Refinement.map_find(target_each_file_path(target: target), &find_in_changesets)
     end
 
     # @yieldparam used_path [UsedPath] an absolute path that belongs to the given project
@@ -334,9 +334,9 @@ module Refinement
     #   if none if found
     # @note This method does not take into account whatever file paths targets in the project may reference
     # @param project [Xcodeproj::Project]
-    def find_project_modification_in_changeset(project:)
+    def find_project_modification_in_changesets(project:)
       Refinement.map_find(project_each_file_path(project: project)) do |path|
-        path.find_in_changeset(changeset)
+        path.find_in_changesets(changesets)
       end
     end
 
@@ -344,17 +344,17 @@ module Refinement
     #   if none if found
     # @note This method does not take into account whatever file paths projects or
     #   targets in the workspace path may reference
-    def find_workspace_modification_in_changeset
+    def find_workspace_modification_in_changesets
       return unless workspace_path
 
       UsedPath.new(path: workspace_path, inclusion_reason: 'workspace directory')
-              .find_in_changeset(changeset)
+              .find_in_changesets(changesets)
     end
 
     # @return [Hash<String,UsedPath>]
     def used_paths_from_augmenting_paths_by_target
       @used_paths_from_augmenting_paths_by_target ||= begin
-        repo = changeset.repository
+        repo = changesets.first.repository
         used_paths_from_augmenting_paths_by_target =
           augmenting_paths_by_target.each_with_object({}) do |(name, augmenting_paths), h|
             h[name] = augmenting_paths.map do |augmenting_path|

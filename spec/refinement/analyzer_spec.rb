@@ -9,8 +9,15 @@ RSpec.describe Refinement::Analyzer do
     let(:project) { build_project(&blk) }
   end
 
+  def self.changesets(*blks, &blk)
+    raise ArgumentError, 'Provide either a list of blocks for a changeset of a single proc to yield to' if blk && !blks.empty?
+
+    blks << blk if blk
+    let(:changesets) { blks.map { |b| build_changeset(&b) } }
+  end
+
   def self.changeset(&blk)
-    let(:changeset) { build_changeset(&blk) }
+    changesets(&blk)
   end
 
   project {}
@@ -154,6 +161,94 @@ RSpec.describe Refinement::Analyzer do
     end
 
     it { is_expected.to eq 'foo' => 'common.m (source file) changed', 'bar' => 'common.m (source file) changed' }
+  end
+
+  describe 'with multiple changesets' do
+    context 'when different dependencies change' do
+      project do
+        foo = target 'foo' do
+          source_files 'foo.m'
+        end
+        bar = target 'bar' do
+          source_files 'bar.m'
+        end
+        target 'baz' do
+          source_files 'baz.m'
+          add_dependency foo
+          add_dependency bar
+        end
+      end
+
+      changesets(
+        ->(*) { file 'foo.m' },
+        ->(*) { file 'bar.m' }
+      )
+
+      it { is_expected.to eq 'foo' => nil, 'bar' => nil, 'baz' => nil }
+    end
+
+    context 'when different dependencies & target change' do
+      project do
+        foo = target 'foo' do
+          source_files 'foo.m'
+        end
+        bar = target 'bar' do
+          source_files 'bar.m'
+        end
+        target 'baz' do
+          source_files 'baz.m'
+          add_dependency foo
+          add_dependency bar
+        end
+      end
+
+      changesets(
+        ->(*) { file 'foo.m' },
+        ->(*) { file 'bar.m' },
+        lambda { |*|
+          file 'baz.m'
+          self.description = 'change with baz'
+        }
+      )
+
+      it { is_expected.to eq 'foo' => nil, 'bar' => nil, 'baz' => nil }
+    end
+
+    context 'when second change adds a new changed file' do
+      project do
+        foo = target 'foo' do
+          source_files 'foo.m'
+        end
+        bar = target 'bar' do
+          source_files 'bar.m'
+        end
+        target 'baz' do
+          source_files 'baz.m'
+          add_dependency foo
+          add_dependency bar
+        end
+      end
+
+      changesets(
+        lambda { |*|
+          file 'foo.m'
+          self.description = 'original change'
+        },
+        lambda { |*|
+          file 'bar.m'
+          file 'foo.m'
+          self.description = 'second change'
+        }
+      )
+
+      it { is_expected.to eq 'foo' => 'foo.m (source file) changed (second change)', 'bar' => nil, 'baz' => nil }
+
+      context 'with full_transitive changes' do
+        let(:change_level) { :full_transitive }
+
+        it { is_expected.to eq 'foo' => 'foo.m (source file) changed (second change)', 'bar' => nil, 'baz' => 'dependency foo changed because foo.m (source file) changed (second change)' }
+      end
+    end
   end
 
   context 'with augmenting_paths_by_target' do
@@ -314,7 +409,7 @@ RSpec.describe Refinement::Analyzer do
     subject(:filtered_scheme_to_s) { analyzer.filtered_scheme(scheme_path: scheme_path, change_level: change_level, filter_when_scheme_has_changed: filter_when_scheme_has_changed, log_changes: log_changes, filter_scheme_for_build_action: filter_scheme_for_build_action).to_s }
 
     let(:analyzer) do
-      described_class.new(changeset: changeset, workspace_path: nil, projects: [project], augmenting_paths_yaml_files: nil, augmenting_paths_by_target: augmenting_paths_by_target)
+      described_class.new(changesets: changesets, workspace_path: nil, projects: [project], augmenting_paths_yaml_files: nil, augmenting_paths_by_target: augmenting_paths_by_target)
     end
     let(:scheme_path) { '/path/to/scheme.xcscheme' }
     let(:filter_when_scheme_has_changed) { false }
