@@ -30,6 +30,22 @@ RSpec.describe Refinement::UsedPath do
         expect(change_reason).to eq 'main.swift (super important file) was changed'
       end
     end
+
+    context 'with the path pointing to a hidden file' do
+      let(:path) { Pathname('/repo/.rc') }
+
+      context 'when the changeset contains the path' do
+        let(:changeset) do
+          Refinement::Changeset.new(repository: Pathname('/repo'), modifications: [
+                                      Refinement::Changeset::FileModification.new(path: Pathname('.rc'), type: :'was changed')
+                                    ])
+        end
+
+        it 'returns the change reason' do
+          expect(change_reason).to eq '.rc (super important file) was changed'
+        end
+      end
+    end
   end
 
   describe '#to_s' do
@@ -106,6 +122,34 @@ RSpec.describe Refinement::UsedPath do
 
         it 'returns the change reason' do
           expect(change_reason).to eq 'main.swift (super important file) was changed'
+        end
+      end
+
+      context 'with a glob pointing to a hidden file' do
+        let(:glob) { '/repo/{*,}.rc' }
+
+        context 'when the changeset contains the path' do
+          let(:changeset) do
+            Refinement::Changeset.new(repository: Pathname('/repo'), modifications: [
+                                        Refinement::Changeset::FileModification.new(path: Pathname('.rc'), type: :'was changed')
+                                      ])
+          end
+
+          it 'returns the change reason' do
+            expect(change_reason).to eq '.rc (super important file) was changed'
+          end
+        end
+
+        context 'when the changeset contains the non-invisible path' do
+          let(:changeset) do
+            Refinement::Changeset.new(repository: Pathname('/repo'), modifications: [
+                                        Refinement::Changeset::FileModification.new(path: Pathname('foo.rc'), type: :'was changed')
+                                      ])
+          end
+
+          it 'returns the change reason' do
+            expect(change_reason).to eq 'foo.rc (super important file) was changed'
+          end
         end
       end
     end

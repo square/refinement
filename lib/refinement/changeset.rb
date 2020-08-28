@@ -89,7 +89,7 @@ module Refinement
       pattern = pattern.gsub('/**/', '{/**/,/}')
       values_by_set = {}
       pattern.scan(/\{[^}]*\}/) do |set|
-        values = set.gsub(/[{}]/, '').split(',')
+        values = set.gsub(/[{}]/, '').split(',', -1)
         values_by_set[set] = values
       end
 
