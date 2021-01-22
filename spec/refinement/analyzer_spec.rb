@@ -512,6 +512,31 @@ RSpec.describe Refinement::Analyzer do
             expect(filtered_scheme_to_s).to eq(scheme_fixture_path.read), "see #{scheme_fixture_path}"
           end
         end
+
+        context 'with each target lambda' do
+          subject!(:filtered_scheme) do
+            analyzer.filtered_scheme(scheme_path: scheme_path,
+                                     change_level: change_level, filter_when_scheme_has_changed: filter_when_scheme_has_changed,
+                                     log_changes: log_changes, filter_scheme_for_build_action: filter_scheme_for_build_action,
+                                     each_target: each_target_lambda)
+          end
+
+          let(:results) { {} }
+          let(:each_target_lambda) do
+            lambda do |type:, target_name:, change_reason:|
+              results[type] ||= []
+              results[type] << "#{target_name} (#{change_reason})"
+            end
+          end
+
+          it 'correctly invokes each target lambda' do
+            expected = {
+              unchanged: ['Foo ()'],
+              changed: ['Foo-Unit-Tests (a_tests.swift (source file) changed)']
+            }
+            expect(results).to eq expected
+          end
+        end
       end
     end
   end
