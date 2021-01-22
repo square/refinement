@@ -57,9 +57,10 @@ module Refinement
     #   `:building` and `:testing`, with the only difference being `BuildActionEntry` are not
     #   filtered out when building for testing, since test action macro expansion could
     #   depend on a build entry being present.
-    # @return [Xcodeproj::XCScheme] a scheme whose unchanged targets have been removed
+    # @param each_target [Proc] A proc called each time a target was determined to have changed or not.
+    # @return [Xcodeproj::XCScheme] a scheme whose unchanged targets have been removed.
     def filtered_scheme(scheme_path:, change_level: :full_transitive, filter_when_scheme_has_changed: false, log_changes: false,
-                        filter_scheme_for_build_action:)
+                        filter_scheme_for_build_action:, each_target: nil)
       scheme = Xcodeproj::XCScheme.new(scheme_path)
 
       sections_to_filter =
@@ -93,9 +94,11 @@ module Refinement
           suite_name = buildable_reference.attributes['BlueprintName']
           if (change_reason = changes_by_suite_name[suite_name])
             puts "#{suite_name} changed because #{change_reason}" if log_changes
+            each_target&.call(type: :changed, target_name: suite_name, change_reason: change_reason)
             next
           end
           puts "#{suite_name} did not change, removing from scheme" if log_changes
+          each_target&.call(type: :unchanged, target_name: suite_name, change_reason: nil)
           buildable_reference.parent.remove
         end
       end
@@ -105,9 +108,11 @@ module Refinement
           suite_name = buildable_reference.attributes['BlueprintName']
           if (change_reason = changes_by_suite_name[suite_name])
             puts "#{suite_name} changed because #{change_reason}" if log_changes
+            each_target&.call(type: :changed, target_name: suite_name, change_reason: change_reason)
             next
           end
           puts "#{suite_name} did not change, setting to not build for testing" if log_changes
+          each_target&.call(type: :unchanged, target_name: suite_name, change_reason: nil)
           buildable_reference.parent.attributes['buildForTesting'] = 'NO'
         end
       end
