@@ -77,7 +77,7 @@ module Refinement
         dig_yaml = lambda do |yaml, path|
           return yaml if DOES_NOT_EXIST == yaml
 
-          object = @cached_yaml[path] ||= YAML.safe_load(yaml, [Symbol])
+          object = @cached_yaml[path] ||= YAML.safe_load(yaml, [Symbol], aliases: true)
           if keypath.empty?
             object
           elsif object.respond_to?(:dig)
