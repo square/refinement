@@ -115,27 +115,29 @@ module Refinement
     #   multiple modifications that match the glob
     # @param absolute_glob [String] a glob pattern for absolute paths, suitable for an invocation of `Dir.glob`
     def find_modification_for_glob(absolute_glob:)
-      absolute_globs = dir_glob_equivalent_patterns(absolute_glob)
-      _path, modification = modified_absolute_paths.find do |absolute_path, _modification|
-        absolute_globs.any? do |glob|
-          File.fnmatch?(glob, absolute_path, File::FNM_CASEFOLD | File::FNM_PATHNAME)
-        end
-      end
-      modification
+      modifications_for_glob(absolute_glob: absolute_glob, first_match_only: true).first
     end
 
     # @return [Array<FileModification>,Nil] modifications for the given absolute glob,
     #   or `nil` if no files matching the glob were modified
     # @param absolute_glob [String] a glob pattern for absolute paths, suitable for an invocation of `Dir.glob`
     def find_modifications_for_glob(absolute_glob:)
+      modifications_for_glob(absolute_glob: absolute_glob, first_match_only: false)
+    end
+
+    def modifications_for_glob(absolute_glob:, first_match_only:)
       absolute_globs = dir_glob_equivalent_patterns(absolute_glob)
-      selected_modifications = modified_absolute_paths.select do |absolute_path, _modification|
-        absolute_globs.any? do |glob|
+      selected_modifications = modified_absolute_paths.select do |absolute_path, modification|
+        matches = absolute_globs.any? do |glob|
           File.fnmatch?(glob, absolute_path, File::FNM_CASEFOLD | File::FNM_PATHNAME)
         end
+        return [modification] if first_match_only && matches
+
+        matches
       end
       selected_modifications.values
     end
+    private :modifications_for_glob
 
     # @return [FileModification,Nil] a modification and yaml diff for the keypath at the given absolute path,
     #  or `nil` if the value at the given keypath is un-modified

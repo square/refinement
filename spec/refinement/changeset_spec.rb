@@ -106,6 +106,44 @@ RSpec.describe Refinement::Changeset do
     end
   end
 
+  describe '.find_modification_for_glob' do
+    let(:changeset) do
+      described_class.new(
+        repository: '/repo',
+        modifications: modifications
+      )
+    end
+    let(:glob) { '/repo/dir/*' }
+    let(:glob_modification) { changeset.find_modification_for_glob(absolute_glob: glob) }
+    let(:modifications) { [] }
+
+    context 'with two matching modifications' do
+      let(:modifications) do
+        [
+          mod('dir/file1.txt'),
+          mod('dir/file2.txt')
+        ]
+      end
+
+      it 'returns any modification' do
+        expect(glob_modification).not_to eq nil
+        expect(modifications).to include glob_modification
+      end
+    end
+
+    context 'with no matching modifications' do
+      let(:modifications) do
+        [
+          mod('other_dir/file.txt')
+        ]
+      end
+
+      it 'returns nil' do
+        expect(glob_modification).to eq nil
+      end
+    end
+  end
+
   describe '.find_modifications_for_glob' do
     let(:changeset) do
       described_class.new(
