@@ -1,5 +1,12 @@
 # Refinement Changes
 
+## 0.7.0 (2022-12-21)
+
+##### Enhancements
+
+* Introduce `find_modifications_for_glob` that returns all glob matching modification.
+
+
 ## 0.3.1 (2019-08-09)
 
 ##### Bug Fixes
