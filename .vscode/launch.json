@@ -1,0 +1,45 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Debug Ruby",
+      "type": "rdbg",
+      "request": "launch",
+      "cwd": "${workspaceRoot}",
+      "command": "ruby",
+      "useBundler": true,
+      "script": "bin/refine",
+      "args": []
+    },
+    {
+      "name": "Run RSpec - all",
+      "type": "rdbg",
+      "request": "launch",
+      "cwd": "${workspaceRoot}",
+      "command": "rspec",
+      "useBundler": true,
+      "args": [],
+      "script": "--pattern spec/**/*_spec.rb"
+  },
+    {
+      "name": "Debug RSpec - open spec file",
+      "type": "rdbg",
+      "request": "launch",
+      "cwd": "${workspaceRoot}",
+      "command": "rspec",
+      "useBundler": true,
+      "args": [],
+      "script": "${file}"
+    },
+    {
+      "name": "Debug RSpec - open spec file & current line",
+      "type": "rdbg",
+      "request": "launch",
+      "cwd": "${workspaceRoot}",
+      "command": "rspec",
+      "useBundler": true,
+      "args": [],
+      "script": "${file}:${lineNumber}"
+    }
+  ]
+}

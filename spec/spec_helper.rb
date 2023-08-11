@@ -1,8 +1,9 @@
 # frozen_string_literal: true
 
+require 'rubygems'
 require 'bundler/setup'
-require 'refinement'
 require 'active_support/core_ext/string/strip'
+require 'refinement'
 
 RSpec.configure do |config|
   # Enable flags like --only-failures and --next-failure

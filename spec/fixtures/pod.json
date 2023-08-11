@@ -1,0 +1,282 @@
+{
+  "PodA": [
+    {
+      "inclusion_reason": "CocoaPods lockfile",
+      "path": "Podfile.lock",
+      "yaml_keypath": [
+        "SPEC CHECKSUMS",
+        "PodA"
+      ]
+    },
+    {
+      "inclusion_reason": "podspec",
+      "path": "PodA/PodA.podspec.json"
+    },
+    {
+      "glob": "PodA/Sources/**/*.{h,m}",
+      "inclusion_reason": "source file"
+    },
+    {
+      "glob": "PodA/Sources/*.swift",
+      "inclusion_reason": "source file"
+    }
+  ],
+  "PodA-DemoApp": [
+    {
+      "inclusion_reason": "CocoaPods lockfile",
+      "path": "Podfile.lock",
+      "yaml_keypath": [
+        "SPEC CHECKSUMS",
+        "PodA"
+      ]
+    },
+    {
+      "inclusion_reason": "podspec",
+      "path": "PodA/PodA.podspec.json"
+    },
+    {
+      "glob": "PodA/DemoApp/main.swift",
+      "inclusion_reason": "source file"
+    }
+  ],
+  "PodB-iOS": [
+    {
+      "inclusion_reason": "CocoaPods lockfile",
+      "path": "Podfile.lock",
+      "yaml_keypath": [
+        "SPEC CHECKSUMS",
+        "PodB"
+      ]
+    },
+    {
+      "inclusion_reason": "podspec",
+      "path": "PodB/PodB.podspec.json"
+    },
+    {
+      "glob": "PodB/Sources/**/*.{h,m}",
+      "inclusion_reason": "source file"
+    },
+    {
+      "glob": "PodB/Sources/*.swift",
+      "inclusion_reason": "source file"
+    },
+    {
+      "glob": "PodB/Resources/bare/*.png",
+      "inclusion_reason": "resource"
+    },
+    {
+      "glob": "PodB/Scripts/*",
+      "inclusion_reason": "preserve path"
+    },
+    {
+      "glob": "PodB/Resources/1/**/*",
+      "inclusion_reason": "resource bundle"
+    },
+    {
+      "glob": "PodB/Resources/2/**/*",
+      "inclusion_reason": "resource bundle"
+    }
+  ],
+  "PodB-macOS": [
+    {
+      "inclusion_reason": "CocoaPods lockfile",
+      "path": "Podfile.lock",
+      "yaml_keypath": [
+        "SPEC CHECKSUMS",
+        "PodB"
+      ]
+    },
+    {
+      "inclusion_reason": "podspec",
+      "path": "PodB/PodB.podspec.json"
+    },
+    {
+      "glob": "PodB/Sources/**/*.{h,m}",
+      "inclusion_reason": "source file"
+    },
+    {
+      "glob": "PodB/Sources/*.swift",
+      "inclusion_reason": "source file"
+    },
+    {
+      "glob": "PodB/Resources/bare/*.png",
+      "inclusion_reason": "resource"
+    },
+    {
+      "glob": "PodB/Scripts/*",
+      "inclusion_reason": "preserve path"
+    },
+    {
+      "glob": "PodB/Resources/1/**/*",
+      "inclusion_reason": "resource bundle"
+    },
+    {
+      "glob": "PodB/Resources/2/**/*",
+      "inclusion_reason": "resource bundle"
+    }
+  ],
+  "PodC-iOS": [
+    {
+      "inclusion_reason": "CocoaPods lockfile",
+      "path": "Podfile.lock",
+      "yaml_keypath": [
+        "SPEC CHECKSUMS",
+        "PodC"
+      ]
+    },
+    {
+      "inclusion_reason": "podspec",
+      "path": "PodC/PodC.podspec.json"
+    },
+    {
+      "glob": "PodC/Sources/**/*.{h,m}",
+      "inclusion_reason": "source file"
+    },
+    {
+      "glob": "PodC/Sources/*.swift",
+      "inclusion_reason": "source file"
+    },
+    {
+      "glob": "PodC/SubSpec/Sources/*",
+      "inclusion_reason": "source file"
+    },
+    {
+      "glob": "PodC/include/*.h",
+      "inclusion_reason": "public header file"
+    }
+  ],
+  "PodC-macOS": [
+    {
+      "inclusion_reason": "CocoaPods lockfile",
+      "path": "Podfile.lock",
+      "yaml_keypath": [
+        "SPEC CHECKSUMS",
+        "PodC"
+      ]
+    },
+    {
+      "inclusion_reason": "podspec",
+      "path": "PodC/PodC.podspec.json"
+    },
+    {
+      "glob": "PodC/Sources/**/*.{h,m}",
+      "inclusion_reason": "source file"
+    },
+    {
+      "glob": "PodC/Sources/*.swift",
+      "inclusion_reason": "source file"
+    },
+    {
+      "glob": "PodC/SubSpec/Sources/*",
+      "inclusion_reason": "source file"
+    }
+  ],
+  "PodTV": [
+    {
+      "inclusion_reason": "CocoaPods lockfile",
+      "path": "Podfile.lock",
+      "yaml_keypath": [
+        "SPEC CHECKSUMS",
+        "PodTV"
+      ]
+    },
+    {
+      "inclusion_reason": "podspec",
+      "path": "PodTV/PodTV.podspec.json"
+    },
+    {
+      "glob": "PodTV/Sources/**/*.m",
+      "inclusion_reason": "source file"
+    }
+  ],
+  "PodGit": [
+    {
+      "inclusion_reason": "CocoaPods lockfile",
+      "path": "Podfile.lock",
+      "yaml_keypath": [
+        "SPEC CHECKSUMS",
+        "PodGit"
+      ]
+    },
+    {
+      "inclusion_reason": "Dependency external source",
+      "path": "Podfile.lock",
+      "yaml_keypath": [
+        "EXTERNAL SOURCES",
+        "PodGit"
+      ]
+    },
+    {
+      "inclusion_reason": "Pod checkout options",
+      "path": "Podfile.lock",
+      "yaml_keypath": [
+        "CHECKOUT OPTIONS",
+        "PodGit"
+      ]
+    },
+    {
+      "glob": "Pods/PodGit/Sources/**/*.m",
+      "inclusion_reason": "source file"
+    }
+  ],
+  "Pods-A Tests": [
+    {
+      "inclusion_reason": "user project",
+      "path": "UserProject.xcodeproj"
+    }
+  ],
+  "Pods-A": [
+    {
+      "inclusion_reason": "user project",
+      "path": "UserProject.xcodeproj"
+    }
+  ],
+  "Pods-B": [
+    {
+      "inclusion_reason": "user project",
+      "path": "UserProject.xcodeproj"
+    }
+  ],
+  "Pods-B Mac": [
+    {
+      "inclusion_reason": "user project",
+      "path": "UserProject.xcodeproj"
+    }
+  ],
+  "TestPodA": [
+    {
+      "inclusion_reason": "CocoaPods lockfile",
+      "path": "Podfile.lock",
+      "yaml_keypath": [
+        "SPEC CHECKSUMS",
+        "TestPodA"
+      ]
+    },
+    {
+      "inclusion_reason": "podspec",
+      "path": "TestPodA/TestPodA.podspec.json"
+    },
+    {
+      "glob": "TestPodA/Sources/**/*.{h,m}",
+      "inclusion_reason": "source file"
+    },
+    {
+      "glob": "TestPodA/Sources/*.swift",
+      "inclusion_reason": "source file"
+    }
+  ],
+  "TestPodA-Unit-WhoTestsTheTests": [
+    {
+      "inclusion_reason": "CocoaPods lockfile",
+      "path": "Podfile.lock",
+      "yaml_keypath": [
+        "SPEC CHECKSUMS",
+        "TestPodA"
+      ]
+    },
+    {
+      "inclusion_reason": "podspec",
+      "path": "TestPodA/TestPodA.podspec.json"
+    }
+  ]
+}
