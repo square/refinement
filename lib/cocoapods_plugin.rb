@@ -11,9 +11,9 @@ Pod::Installer
 
                raise Pod::Informative, 'Refinement requires a CocoaPods version >= 1.6.0' unless Gem::Version.create(Pod::VERSION) >= Gem::Version.create('1.6.0')
 
-               require 'refinement/cocoapods_post_install_writer'
+               require 'sq/refinement/cocoapods_post_install_writer'
                Pod::UI.message 'Writing refinement file' do
-                 Refinement::CocoaPodsPostInstallWriter.new(aggregate_targets, pod_targets, config, plugins['refinement']).write!
+                 Sq::Refinement::CocoaPodsPostInstallWriter.new(aggregate_targets, pod_targets, config, plugins['refinement']).write!
                end
              end
            end)

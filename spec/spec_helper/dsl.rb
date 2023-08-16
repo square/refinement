@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require 'xcodeproj'
+
 module SpecHelper
   module DSL
     def build_changeset(*args, &blk)
@@ -13,9 +15,9 @@ module SpecHelper
       end
 
       def file(path, type: :changed, prior_path: nil, prior_content: nil, current_content: nil)
-        @modifications << Refinement::Changeset::FileModification.new(
+        @modifications << Sq::Refinement::Changeset::FileModification.new(
           path: Pathname(path),
-          type: type,
+          type:,
           prior_path: (Pathname(prior_path) if prior_path),
           contents_reader: -> { current_content },
           prior_contents_reader: -> { prior_content }
@@ -25,7 +27,7 @@ module SpecHelper
       attr_writer :description
 
       def changeset
-        Refinement::Changeset.new(
+        Sq::Refinement::Changeset.new(
           modifications: @modifications,
           repository: Pathname('/repository'),
           description: @description
@@ -86,9 +88,9 @@ module SpecHelper
           @target.build_configurations.each { |bc| bc.build_settings.merge!(settings) }
         end
 
-        def method_missing(name, *args, &blk)
+        def method_missing(name, ...)
           if @target.respond_to?(name)
-            @target.send(name, *args, &blk)
+            @target.send(name, ...)
           else
             super
           end
@@ -101,12 +103,12 @@ module SpecHelper
     end
 
     def changes(level:, augmenting_paths_by_target: {})
-      analyzer = Refinement::Analyzer.new(changesets: changesets, workspace_path: nil, projects: [project], augmenting_paths_yaml_files: nil, augmenting_paths_by_target: augmenting_paths_by_target)
+      analyzer = Sq::Refinement::Analyzer.new(changesets:, workspace_path: nil, projects: [project], augmenting_paths_yaml_files: nil, augmenting_paths_by_target:)
       annotated_targets = analyzer.annotate_targets!
-      Hash[annotated_targets.map do |annotated_target|
-        change_reason = annotated_target.change_reason(level: level)
+      annotated_targets.to_h do |annotated_target|
+        change_reason = annotated_target.change_reason(level:)
         [annotated_target.xcode_target.name, change_reason]
-      end]
+      end
     end
   end
 end

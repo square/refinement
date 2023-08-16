@@ -1,5 +1,21 @@
 # Refinement Changes
 
+## 0.7.0 (2023-08-11)
+
+##### Breaking Changes
+
+Since the introduction of the class '**Refinement**' 
+[in Ruby 3.1](https://ruby-doc.org/core-3.1.0/Refinement.html), there is a naming 
+collision that requires this gem to be updated. 
+
+We have prefixed the `Refinement` module with `Sq::` to minimize the amount of 
+downstream changes required, in addition to maintaining the meaning and purpose 
+of the project.
+
+##### Enhancements
+
+* Update dependencies to modern versions
+
 ## 0.3.1 (2019-08-09)
 
 ##### Bug Fixes
